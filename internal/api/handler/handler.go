@@ -18,5 +18,24 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 	router.Use(gin.Logger())
 
+	reviews := router.Group("/reviews")
+	{
+		reviews.GET("/:id", h.GetReviewsForEvent)
+		reviews.POST("/:id", h.CreateReviewForEvent)
+	}
+
+	//event := router.Group("/event")
+	//{
+	//
+	//}
+
+	user := router.Group("/user")
+	{
+		user.GET("/:id/events", h.GetEventsForUser)
+		user.GET("/:id", h.GetUserById)
+
+		user.PUT("/:id", h.UpdateUser)
+	}
+
 	return router
 }
