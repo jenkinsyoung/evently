@@ -6,13 +6,13 @@ import (
 )
 
 type Event struct {
-	EventID      uuid.UUID `json:"event_id" db:"id"`
-	EventName    string    `json:"event_name" db:"name"`
-	Description  string    `json:"description" db:"description"`
-	StartDate    time.Time `json:"start_date" db:"start_date"`
-	EndDate      time.Time `json:"end_date,omitempty" db:"end_date"`
+	EventID      uuid.UUID `json:"event_id" db:"id" binding:"required,uuid"`
+	EventName    string    `json:"event_name" db:"name" binding:"required,min=3,max=255"`
+	Description  string    `json:"description" db:"description" binding:"required"`
+	StartDate    time.Time `json:"start_date" db:"start_date" binding:"required"`
+	EndDate      time.Time `json:"end_date,omitempty" db:"end_date" binding:"required,gtfield=StartDate"`
 	Creator      User      `json:"creator"`
 	Location     string    `json:"locations" db:"location"`
 	Category     Category  `json:"category"`
-	Participants int       `json:"participants" db:"participants"`
+	Participants int       `json:"participants" db:"participants" json:"participants" binding:"omitempty,min=0"`
 }

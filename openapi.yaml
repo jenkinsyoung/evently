@@ -1,0 +1,437 @@
+openapi: 3.0.4
+info:
+  title: Evently
+  version: 1.0.12
+tags:
+  - name: event
+    description: Event operations
+  - name: user
+    description: User operations
+  - name: review
+    description: Review operations
+paths:
+  /event:
+    put:
+      tags:
+        - event
+      summary: Обновление мероприятия
+      description: Обновление мероприятия по ID
+      operationId: updateEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+        required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid ID 
+        '404':
+          description: Event not found
+        '422':
+          description: Validation exception
+        # default:
+        #   description: Unexpected error
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - event
+      summary: Добавление мероприятия
+      description: Добавление нового мероприятия
+      operationId: createEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+        required: true
+      responses:
+        '201':
+          description: Successfully created
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+        # default:
+        #   description: Unexpected error
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: "#/components/schemas/Error"
+        
+  /event/{id}:
+    get:
+      tags:
+        - event
+      summary: Найти мероприятие по UUID
+      description: Возвращает одно мероприятие
+      parameters:
+        - name: id
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: getEvent
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid ID 
+        '404':
+          description: Event not found
+      
+      post:
+        tags:
+          - event
+        summary: Зарегистрироваться на мероприятие
+        description: Пользователь регистрируется на мероприятие
+        parameters:
+          - name: id
+            in: path
+            required: true
+            example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+            schema:
+              type: string
+              format: uuid
+        operationId: registerUserForEvent
+        responses:
+          '200':
+            description: Successful operation
+            content: {}
+          '400':
+            description: Invalid ID 
+          '404':
+            description: Event not found
+    
+    delete:
+      tags:
+        - event
+      summary: Удалить мероприятие по UUID
+      description: Удаляет одно мероприятие
+      parameters:
+        - name: id
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: deleteEvent
+      responses:
+        '200':
+          description: Successful operation
+          content: {}
+        '400':
+          description: Invalid ID 
+        '404':
+          description: Event not found
+  
+  /event/{id}/participants:
+    get:
+      tags:
+        - event
+      summary: Получить всех участников мероприятия
+      description: Возвращает всех участников
+      parameters:
+        - name: id
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: getParticipantsForEvent
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid ID 
+        '404':
+          description: Event not found
+          
+  /user/{userID}/events:
+    get:
+      tags:
+        - user
+      summary: Получить мероприятия пользователя
+      description: Возвращает все мероприятия пользователя 
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+        - name: isCreator
+          in: query
+          required: true
+          schema:
+            type: boolean
+      operationId: getEventsForUser
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid ID 
+        '404':
+          description: Event not found
+  
+  /user/{userID}:
+    get:
+      tags:
+        - user
+      summary: Получить пользователя
+      description: Возвращает пользователя 
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: getUserByID
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid ID 
+        '404':
+          description: User not found
+    
+    put: 
+      tags:
+        - user
+      summary: Изменение пользователя
+      description: Изменение пользователя
+      parameters:
+      - name: userID
+        in: path
+        required: true
+        example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+        schema:
+          type: string
+          format: uuid
+      operationId: updateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content: {}
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+  /events/all:
+    get:
+      tags:
+        - event
+      summary: Получить все мероприятия
+      description: Возвращает все мероприятия
+      operationId: getAllEvents
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid ID 
+        '404':
+          description: Events not found
+    
+    
+  
+  /reviews/{eventID}:
+    post:
+        tags:
+          - review
+        summary: Добавление отзыва
+        description: Добавление нового отзыва
+        parameters:
+        - name: eventID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+        operationId: createReview
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          required: true
+        responses:
+          '201':
+            description: Successfully created
+            content:
+              application/json:
+                schema:
+                  type: string
+                  format: uuid
+          '400':
+            description: Invalid input
+          '422':
+            description: Validation exception
+    get:
+      tags:
+        - review
+      summary: Получить все отзывы к мероприятию
+      description: Возвращает все отзывы к мероприятию
+      parameters:
+        - name: eventID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: getAllReviewsForEvent
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+        '400':
+          description: Invalid ID 
+        '404':
+          description: Event not found      
+
+components:
+  schemas:
+    Event:
+      type: object
+      properties: 
+        event_id:
+          type: string
+          format: uuid
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+        name:
+          type: string
+          example: Карнавал
+        description:
+          type: string
+          example: Очень крутое мероприятие
+        start_date:
+          description: Дата и время начала
+          type: string
+          example: 2025-04-10T16:45:00.000Z
+        end_date:
+          description: Дата и время окончания
+          type: string
+          example: 2025-04-10T16:45:00.000Z
+          nullable: true
+        creator_id:
+          type: string
+          format: uuid
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b7
+        location:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+        participants:
+          description: Количество участников
+          type: integer
+          example: 10
+          nullable: true
+          
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        nickname:
+          type: string
+    
+    Review:
+      type: object
+      properties:
+        review_id:
+          type: string
+          format: uuid
+        event:
+          $ref: '#/components/schemas/Event'
+        user:
+          $ref: '#/components/schemas/User'
+        description:
+          type: string
+          example: "Прекрасное меропориятие, мне оч понравилось"
+        score:
+          type: number
+          format: float
+    
+    
+  
+        
+      
+
+
+      
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header

@@ -24,10 +24,15 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		reviews.POST("/:id", h.CreateReviewForEvent)
 	}
 
-	//event := router.Group("/event")
-	//{
-	//
-	//}
+	event := router.Group("/event")
+	{
+		event.POST("/", h.CreateEventHandler)
+		event.GET("/:id", h.GetEventById)
+		event.GET("/:id/participants", h.GetEventParticipants)
+		event.DELETE("/:id", h.DeleteEventById)
+		event.PUT("/:id", h.UpdateEvent)
+		event.GET("/all", h.GetAllEvents)
+	}
 
 	user := router.Group("/user")
 	{

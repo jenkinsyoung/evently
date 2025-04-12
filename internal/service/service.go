@@ -20,14 +20,16 @@ type Reviews interface {
 }
 
 type Event interface {
-	CreateEvent(event *models.Event) error
+	CreateEvent(ctx context.Context, event *models.Event) error
 
-	GetEventByID(eventID uuid.UUID) (*models.Event, error)
-	GetEventParticipants(eventID uuid.UUID) ([]models.User, error)
+	GetEventById(ctx context.Context, eventId uuid.UUID) (*models.Event, error)
+	GetEventParticipants(ctx context.Context, eventId uuid.UUID) ([]models.User, error)
 
-	DeleteEventByID(eventID uuid.UUID) error
+	DeleteEventById(ctx context.Context, eventId uuid.UUID) error
 
-	UpdateEvent(event *models.Event) error
+	UpdateEvent(ctx context.Context, event *models.Event) error
+
+	GetAllEvents(ctx context.Context, page, pageSize int) ([]models.Event, error)
 }
 
 type User interface {
