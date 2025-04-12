@@ -159,11 +159,11 @@ class _ProfilePageState extends State<ProfilePage> {
       width: MediaQuery.sizeOf(context).width,
       height: 40,
       decoration: BoxDecoration(color: Colors.grey[200]),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           //Container(width: 30, height: 40, color: Colors.grey[200]),
-          const Text(
+          Text(
             'Профиль',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
@@ -198,7 +198,7 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           CircleAvatar(
             radius: 62,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: Color(0xFF872341),
             // Добавьте загрузку аватарки, если она есть в вашей базе данных
             // backgroundImage: _userData?['avatar_url'] != null
             //   ? NetworkImage(_userData!['avatar_url'])
@@ -210,14 +210,14 @@ class _ProfilePageState extends State<ProfilePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '$nickname, $age',
+                  '$nickname',
                   style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
                     children: [
-                      const Icon(Icons.location_on, color: Colors.black),
+                      const Icon(Icons.location_on, color: Colors.black87),
                       Text(
                         city,
                         style: const TextStyle(fontSize: 16),
@@ -233,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     },
                     child: const Text(
                       'Редактировать',
-                      style: TextStyle(fontSize: 16, color: Colors.blue),
+                      style: TextStyle(fontSize: 16, color: Color(0xFF872341)),
                     ),
                   ),
                 ),
@@ -247,14 +247,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildContactsSection() {
     final email = _userData?['email'] ?? _supabase.auth.currentUser?.email ?? 'example@example.com';
-    final phone = _userData?['phone'] ?? '+7 999 999-99-99';
-    final username = _userData?['username'] ?? '@loloneme';
+    // final phone = _userData?['phone'] ?? '+7 999 999-99-99';
+    // final username = _userData?['username'] ?? '@loloneme';
 
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Container(
         width: MediaQuery.sizeOf(context).width,
-        decoration: BoxDecoration(color: const Color(0xFFC5C5C5)),
+        decoration: BoxDecoration(color: const Color(0xE3FFB7AC)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
           child: Column(
@@ -265,8 +265,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 5),
-              _ContactRow(contact: username),
-              _ContactRow(contact: phone),
+              // _ContactRow(contact: username),
+              // _ContactRow(contact: phone),
               _ContactRow(contact: email),
               const SizedBox(height: 10),
             ],

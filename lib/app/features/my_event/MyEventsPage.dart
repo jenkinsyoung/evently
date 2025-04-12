@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 class MyEventsPage extends StatefulWidget {
   const MyEventsPage({super.key});
 
@@ -18,9 +17,36 @@ class MyEventsPage extends StatefulWidget {
 class _MyEventsPageState extends State<MyEventsPage> {
   DateTime? _selectedDate;
   final _supabase = Supabase.instance.client;
-  List<Map<String, dynamic>> _events = [];
+  List<Map<String, dynamic>> _allEvents = [];
+  List<Map<String, dynamic>> _filteredEvents = [];
   bool _isLoading = true;
   bool _userPickedDate = false;
+  String? _selectedCategory;
+  List<String> _categories = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = DateTime.now();
+    _fetchCategories();
+    _fetchEvents();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final response = await _supabase
+          .from('category')
+          .select('name')
+          .order('name', ascending: true);
+
+      setState(() {
+        _categories = (response as List).map((e) => e['name'] as String).toList();
+        _categories.insert(0, 'Все');
+      });
+    } catch (e) {
+      print('Error fetching categories: $e');
+    }
+  }
 
   Future<void> _fetchEvents() async {
     try {
@@ -33,14 +59,6 @@ class _MyEventsPageState extends State<MyEventsPage> {
         throw Exception('User not authenticated');
       }
 
-      final startDate = _userPickedDate
-          ? DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day)
-          : DateTime(now.year, now.month, now.day);
-
-      final endDate = _userPickedDate
-          ? startDate.add(const Duration(days: 1))
-          : startDate.add(const Duration(days: 30));
-
       final response = await _supabase
           .from('events')
           .select('''
@@ -50,15 +68,14 @@ class _MyEventsPageState extends State<MyEventsPage> {
             category_id:category!inner(name)
           ''')
           .eq('creator_id', userId)
-          .or('start_date.lte.${endDate.toIso8601String()},end_date.gte.${startDate.toIso8601String()}')
           .order('start_date', ascending: true);
 
       setState(() {
-        _events = response as List<Map<String, dynamic>>;
+        _allEvents = response as List<Map<String, dynamic>>;
+        _filteredEvents = List.from(_allEvents);
         _isLoading = false;
-        print(_events);
-        print(userId);
       });
+      _applyFilters();
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,12 +84,112 @@ class _MyEventsPageState extends State<MyEventsPage> {
     }
   }
 
+  void _applyFilters() {
+    List<Map<String, dynamic>> filtered = List.from(_allEvents);
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedDate = DateTime.now();
-    _fetchEvents();
+    // Фильтр по дате
+    if (_userPickedDate && _selectedDate != null) {
+      final startOfDay = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+      );
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      filtered = filtered.where((event) {
+        try {
+          final eventDate = DateTime.parse(event['start_date'] as String);
+          return eventDate.isAfter(startOfDay) && eventDate.isBefore(endOfDay);
+        } catch (e) {
+          return false;
+        }
+      }).toList();
+    }
+
+    // Фильтр по категории
+    if (_selectedCategory != null && _selectedCategory != 'Все') {
+      filtered = filtered.where((event) {
+        return event['category_id']?['name'] == _selectedCategory;
+      }).toList();
+    }
+
+    setState(() {
+      _filteredEvents = filtered;
+    });
+  }
+
+  Future<void> _showCategoryFilter() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Фильтр по категориям',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: _categories.map((category) {
+                    return ListTile(
+                      title: Text(category),
+                      trailing: _selectedCategory == category ||
+                          (category == 'Все' && _selectedCategory == null)
+                          ? const Icon(Icons.check, color: Color(0xFF872341))
+                          : null,
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = category == 'Все' ? null : category;
+                        });
+                        _applyFilters();
+                        Navigator.pop(context);
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        _selectedDate = pickedDate;
+        _userPickedDate = true;
+      });
+      _applyFilters();
+    }
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _selectedDate = DateTime.now();
+      _userPickedDate = false;
+      _selectedCategory = null;
+    });
+    _applyFilters();
   }
 
   @override
@@ -82,7 +199,6 @@ class _MyEventsPageState extends State<MyEventsPage> {
       child: WillPopScope(
         onWillPop: () async => false,
         child: Scaffold(
-          // backgroundColor: Colors.white,
           floatingActionButton: FloatingActionButton(
             onPressed: () {
               Navigator.push(
@@ -92,104 +208,126 @@ class _MyEventsPageState extends State<MyEventsPage> {
                 ),
               );
             },
-            backgroundColor: Color(0xFFE17564),
+            backgroundColor: const Color(0xFFE17564),
             elevation: 8,
             child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
           ),
           body: SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const SizedBox(width: 33, height: 33),
-                        const Text(
-                          'Мои мероприятия',
-                          style: TextStyle(fontSize: 16, fontFamily: 'Montserrat'),
+            child: Column(
+              children: [
+                Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 33, height: 33),
+                      const Text(
+                        'Мои мероприятия',
+                        style: TextStyle(fontSize: 16, fontFamily: 'Montserrat'),
+                      ),
+                      badges.Badge(
+                        badgeContent: const Text(
+                          '1',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Nunito',
+                          ),
                         ),
-                        badges.Badge(
-                          badgeContent: const Text(
-                            '1',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'Nunito',
+                        child: const SizedBox(width: 33, height: 33),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: 54,
+                  color: const Color(0xFFE17564),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.sort_rounded, color: Colors.white),
+                        onPressed: _showCategoryFilter,
+                      ),
+                      InkWell(
+                        onTap: _pickDate,
+                        child: Text(
+                          _selectedDate == null
+                              ? 'Выбрать дату'
+                              : '${_selectedDate!.day}.${_selectedDate!.month}.${_selectedDate!.year}',
+                          style: const TextStyle(
+                            fontFamily: 'Montserrat',
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (_userPickedDate || _selectedCategory != null)
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: _resetFilters,
+                        )
+                      else
+                        const SizedBox(width: 30),
+                    ],
+                  ),
+                ),
+                if (_userPickedDate || _selectedCategory != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        if (_userPickedDate)
+                          Chip(
+                            label: Text('${_selectedDate!.day}.${_selectedDate!.month}.${_selectedDate!.year}'),
+                            onDeleted: () {
+                              setState(() => _userPickedDate = false);
+                              _applyFilters();
+                            },
+                          ),
+                        if (_selectedCategory != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Chip(
+                              label: Text(_selectedCategory!),
+                              onDeleted: () {
+                                setState(() => _selectedCategory = null);
+                                _applyFilters();
+                              },
                             ),
                           ),
-                          //badgeColor: const Color(0xFF0B057F),
-                          child: const SizedBox(width: 33, height: 33),
-                        ),
                       ],
                     ),
                   ),
-                  Container(
-                    height: 54,
-                    color: Color(0xFFE17564),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.sort_rounded, color: Colors.white,),
-                          onPressed: () {
-                            print('Menu pressed');
-                          },
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            final pickedDate = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(1900),
-                              lastDate: DateTime(2050),
-                            );
-
-                            if (pickedDate != null) {
-                              setState(() {
-                                _selectedDate = pickedDate;
-                              });
-                            }
-                          },
-                          child: Text(
-                            _selectedDate == null
-                                ? 'Выбрать дату'
-                                : '${_selectedDate!.day}.${_selectedDate!.month}.${_selectedDate!.year}',
-                            style: const TextStyle(fontFamily: 'Montserrat',
-                            color: Colors.white,
-                            fontSize: 14),
-                          ),
-                        ),
-                        Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                        ),
-                      ],
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _filteredEvents.isEmpty
+                      ? Center(
+                    child: Text(
+                      _userPickedDate || _selectedCategory != null
+                          ? 'Нет мероприятий по выбранным фильтрам'
+                          : 'У вас нет мероприятий',
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  ListView.builder(
-                    itemCount: _events.length,
+                  )
+                      : ListView.builder(
+                    itemCount: _filteredEvents.length,
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.only(bottom: 16),
                     itemBuilder: (context, index) {
-                      final event = _events[index];
+                      final event = _filteredEvents[index];
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 5, horizontal: 10),
                         child: MyEventUIWidget(event: event),
                       );
                     },
-                  )
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

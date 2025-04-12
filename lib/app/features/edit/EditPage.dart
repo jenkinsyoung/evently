@@ -382,6 +382,92 @@ class _EditPageState extends State<EditPage> {
     super.dispose();
   }
 
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Подтверждение удаления'),
+        content: Text('Вы уверены, что хотите удалить это событие? Это действие нельзя отменить.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteEvent();
+    }
+  }
+
+  Future<void> _deleteEvent() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 1. Delete images from storage
+      await _deleteEventImages();
+
+      // 2. Delete event from database
+      await _supabase
+          .from('events')
+          .delete()
+          .eq('id', widget.event['id']);
+
+      // 3. Navigate back with success
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Событие успешно удалено'))
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ошибка при удалении: ${e.toString()}'))
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteEventImages() async {
+    try {
+      // Delete existing images from storage
+      for (final imageUrl in _existingImageUrls) {
+        try {
+          // Extract filename from URL
+          final uri = Uri.parse(imageUrl);
+          final pathSegments = uri.pathSegments;
+          if (pathSegments.isNotEmpty) {
+            final filename = pathSegments.last;
+            await _supabase.storage
+                .from('eventimages')
+                .remove([filename]);
+          }
+        } catch (e) {
+          print('Error deleting image $imageUrl: $e');
+        }
+      }
+    } catch (e) {
+      print('Error deleting images: $e');
+      rethrow;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -710,7 +796,6 @@ class _EditPageState extends State<EditPage> {
                             style: TextStyle(fontSize: 16),
                           ),
                           Container(
-                            width: 120,
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
@@ -761,21 +846,34 @@ class _EditPageState extends State<EditPage> {
                     ),
 
                     // Submit Button
-                Padding(
-                  padding: const EdgeInsets.only(top: 15, bottom: 20),
-                  child: Center(
-                    child: _isLoading
-                        ? CircularProgressIndicator()
-                        : ElevatedButton(
-                      onPressed: _updateEvent,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        minimumSize: Size(150, 40),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 15, bottom: 20),
+                      child: Center(
+                        child: _isLoading
+                            ? CircularProgressIndicator()
+                            : ElevatedButton(
+                          onPressed: _updateEvent,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            minimumSize: Size(150, 40),
+                          ),
+                          child: Text('Сохранить', style: TextStyle(color: Colors.white)),
+                        ),
                       ),
-                      child: Text('Сохранить', style: TextStyle(color: Colors.white)),
                     ),
-                  ),
-                ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 20),
+                      child: Center(
+                        child: ElevatedButton(
+                          onPressed: _confirmDelete,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            minimumSize: Size(150, 40),
+                          ),
+                          child: Text('Удалить событие', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                    ),
               ],
             ),
           ),

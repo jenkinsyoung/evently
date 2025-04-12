@@ -20,7 +20,7 @@ class ParticipateEventUIWidget extends StatelessWidget {
 
     return SizedBox(
       width: 320,
-      height: 106,
+      height: 136,
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -35,7 +35,6 @@ class ParticipateEventUIWidget extends StatelessWidget {
           children: [
             Container(
               width: 140,
-              height: 105,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(10),
@@ -56,12 +55,12 @@ class ParticipateEventUIWidget extends StatelessWidget {
                 children: [
                   Text(
                     event['title'] ?? 'Название мероприятия',
+                    maxLines: 3,
                     style: const TextStyle(
                       fontFamily: 'Montserrat',
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
-                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),

@@ -191,7 +191,8 @@ class _AboutEventPageState extends State<AboutEventPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                //InfoRow(label: widget.event['category_id']?['name'] ?? 'Категория не указана'),
+                InfoRow(label: widget.event['location'] ?? 'Место не указано'),
+                InfoRow(label: widget.event['category_id']?['name'] ?? 'Категория не указана'),
                 InfoRow(label: formattedDate),
                 const SizedBox(height: 16),
                 Text(
@@ -207,7 +208,7 @@ class _AboutEventPageState extends State<AboutEventPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(creatorDetails?['nickname'] ?? widget.event['creator']?['nickname'] ?? 'Неизвестный пользователь', style: TextStyle(fontWeight: FontWeight.w600)),
-                        Text("Инфоцыганка", style: TextStyle(fontSize: 12)),
+                        // Text("Инфоцыганка", style: TextStyle(fontSize: 12)),
                       ],
                     ),
                   ],

@@ -10,8 +10,7 @@ class EventUIWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // Parse dates and times
     final startDate = DateTime.parse(event['start_date']);
-    final formattedDate = DateFormat('E dd.MM').format(startDate);
-    final startTime = DateFormat('HH:mm').format(startDate);
+    final formattedDate = '${_weekdayName(startDate.weekday)} ${startDate.day.toString().padLeft(2, '0')}.${startDate.month.toString().padLeft(2, '0')} ${startDate.hour.toString().padLeft(2, '0')}:${startDate.minute.toString().padLeft(2, '0')}';
     final location = event['location'] ?? 'Место не указано';
     final creator = event['creator_id'] as String?;
     final category = event['category_id'] as Map<String, dynamic>?;
@@ -30,8 +29,8 @@ class EventUIWidget extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(5.0)
       ),
-      width: 368,
-      height: 126,
+
+      height: 136,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: InkWell(
@@ -47,7 +46,7 @@ class EventUIWidget extends StatelessWidget {
             children: [
               Container(
                 width: 140,
-                height: 105,
+                // height: 105,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   image: DecorationImage(
@@ -57,43 +56,51 @@ class EventUIWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    event['title'] ?? 'Название мероприятия',
-                    style: const TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16,
-                      color: Color(0xFF872341),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      event['title'] ?? 'Название мероприятия',
+                      maxLines: 3,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                        color: Color(0xFF872341),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    '$formattedDate $startTime',
-                    style: const TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontSize: 14,
-                      color: Color(0xFF09122C),
+                    const SizedBox(height: 5),
+                    Text(
+                      formattedDate,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 14,
+                        color: Color(0xFF09122C),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    location,
-                    style: const TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontSize: 13,
-                      color: Color(0xFF5C5B5B),
+                    const SizedBox(height: 5),
+                    Text(
+                      location,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 13,
+                        color: Color(0xFF5C5B5B),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _weekdayName(int weekday) {
+    const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return weekdays[(weekday - 1) % 7];
   }
 }

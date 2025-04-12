@@ -6,6 +6,7 @@ plugins {
 }
 
 android {
+    compileSdkVersion 34
     namespace = "com.example.evently"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion

@@ -20,22 +20,23 @@ class MyEventUIWidget extends StatelessWidget {
     event['start_date'] != null ? DateTime.tryParse(event['start_date']) : null;
 
     final String formattedDate = startDateTime != null
-        ? DateFormat('E dd.MM HH:mm').format(startDateTime)
+        ? '${_weekdayName(startDateTime.weekday)} ${startDateTime.day.toString().padLeft(2, '0')}.${startDateTime.month.toString().padLeft(2, '0')} ${startDateTime.hour.toString().padLeft(2, '0')}:${startDateTime.minute.toString().padLeft(2, '0')}'
         : 'Дата не указана';
 
-    final int participantCount = event['partisipants']?.length ?? 0;;
+    final int participantCount = event['partisipants']?.length ?? 0;
 
     return Container(
-      width: MediaQuery.of(context).size.width,
+
       decoration: BoxDecoration(
           border: Border.all(
             color: const Color(0xFF872341),
             width: 2,
           ),
-          borderRadius: BorderRadius.circular(5.0)
+          borderRadius: BorderRadius.circular(5.0),
       ),
+      //height: 170,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: InkWell(
           onTap: () {
             Navigator.push(
@@ -50,14 +51,13 @@ class MyEventUIWidget extends StatelessWidget {
             children: [
               Container(
                 width: 140,
-                height: 105,
+                height: 135,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
                   image: DecorationImage(
                     fit: BoxFit.cover,
                     image: NetworkImage(imageUrl),
                   ),
-                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
               const SizedBox(width: 15),
@@ -123,5 +123,9 @@ class MyEventUIWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+  String _weekdayName(int weekday) {
+    const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return weekdays[(weekday - 1) % 7];
   }
 }
