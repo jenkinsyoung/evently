@@ -32,9 +32,13 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	user := router.Group("/user")
 	{
 		user.GET("/:id/events", h.GetEventsForUser)
-		user.GET("/:id", h.GetUserById)
+		user.GET("/:id", h.GetUserByID)
+
+		user.POST("", h.CreateUser)
 
 		user.PUT("/:id", h.UpdateUser)
+
+		user.DELETE("/:id", h.DeleteUser)
 	}
 
 	return router

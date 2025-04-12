@@ -6,7 +6,7 @@ import (
 )
 
 type Event struct {
-	EventId      uuid.UUID `json:"event_id" db:"id"`
+	EventID      uuid.UUID `json:"event_id" db:"id"`
 	EventName    string    `json:"event_name" db:"name"`
 	Description  string    `json:"description" db:"description"`
 	StartDate    time.Time `json:"start_date" db:"start_date"`

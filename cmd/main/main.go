@@ -33,7 +33,7 @@ func main() {
 		panic("failed to create database connection: " + err.Error())
 	}
 
-	repos := repository.NewRepository(database)
+	repos := repository.NewRepository(database.Db)
 	services := service.NewService(repos)
 	handlers := handler.NewHandler(services)
 

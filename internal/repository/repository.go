@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jenkinsyoung/evently/internal/models"
@@ -13,26 +14,30 @@ type Repository struct {
 }
 
 type Reviews interface {
-	CreateReviewForEvent(eventId uuid.UUID, review *models.Review) error
-	GetAllReviewsForEvent(eventId uuid.UUID) ([]models.Review, error)
+	CreateReviewForEvent(ctx context.Context, review *models.Review) error
+	GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.Review, error)
 }
 
 type Event interface {
 	CreateEvent(event *models.Event) error
 
-	GetEventById(eventId uuid.UUID) (*models.Event, error)
-	GetEventParticipants(eventId uuid.UUID) ([]models.User, error)
+	GetEventByID(eventID uuid.UUID) (*models.Event, error)
+	GetEventParticipants(eventID uuid.UUID) ([]models.User, error)
 
-	DeleteEventById(eventId uuid.UUID) error
+	DeleteEventByID(eventID uuid.UUID) error
 
 	UpdateEvent(event *models.Event) error
 }
 
 type User interface {
-	GetEventsForUser(userId uuid.UUID, isCreator bool) ([]models.Event, error)
-	GetUserById(userId uuid.UUID) (*models.User, error)
+	GetEventsForUser(ctx context.Context, userID uuid.UUID, isCreator bool) ([]models.Event, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
 
-	UpdateUser(user *models.User) error
+	CreateUser(ctx context.Context, user *models.User) error
+
+	UpdateUser(ctx context.Context, user *models.User) error
+
+	DeleteUser(ctx context.Context, userID uuid.UUID) error
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {

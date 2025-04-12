@@ -18,16 +18,16 @@ func (s *EventService) CreateEvent(event *models.Event) error {
 	return s.repo.CreateEvent(event)
 }
 
-func (s *EventService) GetEventById(eventId uuid.UUID) (*models.Event, error) {
-	return s.repo.GetEventById(eventId)
+func (s *EventService) GetEventByID(eventID uuid.UUID) (*models.Event, error) {
+	return s.repo.GetEventByID(eventID)
 }
 
-func (s *EventService) GetEventParticipants(eventId uuid.UUID) ([]models.User, error) {
-	return s.repo.GetEventParticipants(eventId)
+func (s *EventService) GetEventParticipants(eventID uuid.UUID) ([]models.User, error) {
+	return s.repo.GetEventParticipants(eventID)
 }
 
-func (s *EventService) DeleteEventById(eventId uuid.UUID) error {
-	return s.repo.DeleteEventById(eventId)
+func (s *EventService) DeleteEventByID(eventID uuid.UUID) error {
+	return s.repo.DeleteEventByID(eventID)
 }
 
 func (s *EventService) UpdateEvent(event *models.Event) error {

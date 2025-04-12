@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/google/uuid"
 	"github.com/jenkinsyoung/evently/internal/models"
 	"github.com/jenkinsyoung/evently/internal/repository"
@@ -14,10 +15,10 @@ func NewReviewsService(repo repository.Reviews) *ReviewsService {
 	return &ReviewsService{repo: repo}
 }
 
-func (s *ReviewsService) CreateReviewForEvent(eventId uuid.UUID, review *models.Review) error {
-	return s.repo.CreateReviewForEvent(eventId, review)
+func (s *ReviewsService) CreateReviewForEvent(ctx context.Context, review *models.Review) error {
+	return s.repo.CreateReviewForEvent(ctx, review)
 }
 
-func (s *ReviewsService) GetAllReviewsForEvent(eventId uuid.UUID) ([]models.Review, error) {
-	return s.repo.GetAllReviewsForEvent(eventId)
+func (s *ReviewsService) GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.Review, error) {
+	return s.repo.GetAllReviewsForEvent(ctx, eventID)
 }

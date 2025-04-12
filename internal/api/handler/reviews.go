@@ -16,7 +16,7 @@ func (h *Handler) GetReviewsForEvent(c *gin.Context) {
 		return
 	}
 
-	reviews, err := h.services.Reviews.GetAllReviewsForEvent(eventID)
+	reviews, err := h.services.Reviews.GetAllReviewsForEvent(c.Request.Context(), eventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -40,7 +40,9 @@ func (h *Handler) CreateReviewForEvent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
-	err = h.services.Reviews.CreateReviewForEvent(eventID, &review)
+	review.EventID = eventID
+
+	err = h.services.Reviews.CreateReviewForEvent(c.Request.Context(), &review)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

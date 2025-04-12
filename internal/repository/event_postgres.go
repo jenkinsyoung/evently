@@ -18,15 +18,15 @@ func (r *EventPostgres) CreateEvent(event *models.Event) error {
 	return nil
 }
 
-func (r *EventPostgres) GetEventById(eventId uuid.UUID) (*models.Event, error) {
+func (r *EventPostgres) GetEventByID(eventID uuid.UUID) (*models.Event, error) {
 	return nil, nil
 }
 
-func (r *EventPostgres) GetEventParticipants(eventId uuid.UUID) ([]models.User, error) {
+func (r *EventPostgres) GetEventParticipants(eventID uuid.UUID) ([]models.User, error) {
 	return nil, nil
 }
 
-func (r *EventPostgres) DeleteEventById(eventId uuid.UUID) error {
+func (r *EventPostgres) DeleteEventByID(eventID uuid.UUID) error {
 	return nil
 }
 
