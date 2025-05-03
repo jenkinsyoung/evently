@@ -5,12 +5,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/jenkinsyoung/evently/internal/models"
 	"github.com/jenkinsyoung/evently/internal/repository"
+	"time"
 )
 
 type Service struct {
 	Reviews
 	Event
 	User
+	TokenManager
+}
+
+type TokenManager interface {
+	GenerateJWTToken(payload Payload) (string, error)
+	ParseJWTToken(accessToken string) (*Payload, error)
 }
 
 type Reviews interface {
@@ -45,8 +52,9 @@ type User interface {
 
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
-		Reviews: NewReviewsService(repos),
-		Event:   NewEventService(repos),
-		User:    NewUserService(repos),
+		TokenManager: NewTokenManagerService(time.Minute * 300),
+		Reviews:      NewReviewsService(repos),
+		Event:        NewEventService(repos),
+		User:         NewUserService(repos),
 	}
 }

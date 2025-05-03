@@ -15,6 +15,8 @@ func (h *Handler) CreateEventHandler(ctx *gin.Context) {
 		return
 	}
 
+	event.EventID = uuid.New()
+
 	if err := h.services.Event.CreateEvent(ctx, &event); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

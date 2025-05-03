@@ -23,16 +23,16 @@ func (r *UserPostgres) GetEventsForUser(ctx context.Context, userID uuid.UUID, i
 		query = `SELECT 
 				e.id, e.name, e.description, e.start_date, e.end_date, e.location, e.participants,
 				c.id, c.name
-				FROM event e 
-				JOIN category c ON e.category_id = c.id
+				FROM events e 
+				JOIN categories c ON e.category_id = c.id
 				WHERE creator_id = $1`
 	} else {
 		query = `SELECT 
 				e.id, e.name, e.description, e.start_date, e.end_date, e.location, e.participants,
 				c.id, c.name
-				FROM event e 
-    			JOIN approved_participant ap ON ap.event_id = e.event_id
-				JOIN category c ON e.category_id = c.id
+				FROM events e 
+    			JOIN approved_participants ap ON ap.event_id = e.id
+				JOIN categories c ON e.category_id = c.id
 				WHERE ap.user_id = $1`
 	}
 
@@ -45,7 +45,7 @@ func (r *UserPostgres) GetEventsForUser(ctx context.Context, userID uuid.UUID, i
 
 		err = rows.Scan(
 			&ev.EventID,
-			&ev.EventName,
+			&ev.EventTitle,
 			&ev.Description,
 			&ev.StartDate,
 			&ev.EndDate,
@@ -79,11 +79,11 @@ func (r *UserPostgres) GetUserByID(ctx context.Context, userID uuid.UUID) (*mode
 
 func (r *UserPostgres) CreateUser(ctx context.Context, user *models.User) error {
 	query := `
-			INSERT INTO users (email, password, nickname, phone) 
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO users (id, email, password, nickname, phone) 
+			VALUES ($1, $2, $3, $4, $5)
 		`
 
-	_, err := r.db.Exec(ctx, query, user.Email, user.Password, user.Nickname, user.Phone)
+	_, err := r.db.Exec(ctx, query, user.UserID, user.Email, user.Password, user.Nickname, user.Phone)
 
 	return err
 }
@@ -103,7 +103,7 @@ func (r *UserPostgres) UpdateUser(ctx context.Context, user *models.User) error 
 
 func (r *UserPostgres) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	query := `
-			DELETE FROM users WHERE user_id=$1
+			DELETE FROM users WHERE id=$1
 		`
 
 	_, err := r.db.Exec(ctx, query, userID)

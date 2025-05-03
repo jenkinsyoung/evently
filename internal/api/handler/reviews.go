@@ -41,6 +41,7 @@ func (h *Handler) CreateReviewForEvent(c *gin.Context) {
 	}
 
 	review.EventID = eventID
+	review.ReviewID = uuid.New()
 
 	err = h.services.Reviews.CreateReviewForEvent(c.Request.Context(), &review)
 	if err != nil {

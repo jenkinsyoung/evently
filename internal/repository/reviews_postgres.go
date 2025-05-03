@@ -17,7 +17,7 @@ func NewReviewsPostgres(db *pgxpool.Pool) *ReviewsPostgres {
 
 func (r *ReviewsPostgres) CreateReviewForEvent(ctx context.Context, review *models.Review) error {
 	query := `
-			INSERT INTO reviews (id, user_id, event_id, text, score)
+			INSERT INTO reviews (id, user_id, event_id, description, score)
 			VALUES ($1, $2, $3, $4, $5)
 		`
 	_, err := r.db.Exec(
@@ -44,8 +44,8 @@ func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uui
 					u.email,
 					u.nickname,
 					u.phone 
-				FROM review r 
-         		JOIN users u ON u.user_id = r.user_id
+				FROM reviews r 
+         		JOIN users u ON u.id = r.user_id
 				WHERE event_id = $1`
 
 	rows, err := r.db.Query(ctx, query, eventID)

@@ -22,12 +22,13 @@ func NewEventPostgres(db *pgxpool.Pool) *EventPostgres {
 func (r *EventPostgres) CreateEvent(ctx context.Context, event *models.Event) error {
 	_, err := r.db.Exec(
 		ctx,
-		`INSERT INTO event (
-			id, name, description, start_date, end_date, 
-			creator_id, location, category_id, participants
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		event.EventID, event.EventName, event.Description, event.StartDate, event.EndDate,
+		`INSERT INTO events (
+			id, title, description, start_date, end_date, 
+			creator_id, location, category_id, participant_count, image_urls
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		event.EventID, event.EventTitle, event.Description, event.StartDate, event.EndDate,
 		event.Creator.UserID, event.Location, event.Category, event.Participants,
+		event.ImageURLs,
 	)
 	if err != nil {
 		return err
@@ -39,14 +40,16 @@ func (r *EventPostgres) GetEventById(ctx context.Context, eventId uuid.UUID) (*m
 	var event models.Event
 	err := r.db.QueryRow(
 		ctx,
-		`SELECT id, name, description, start_date, end_date, 
-				creator_id, location, category_id, participants
-		 FROM event
+		`SELECT id, title, description, start_date, end_date, 
+				creator_id, location, category_id, participant_count,
+				image_urls, created_at
+		 FROM events
 		 WHERE id = $1`,
 		eventId,
 	).Scan(
-		&event.EventID, &event.EventName, &event.Description, &event.StartDate, &event.EndDate,
+		&event.EventID, &event.EventTitle, &event.Description, &event.StartDate, &event.EndDate,
 		&event.Creator.UserID, &event.Location, &event.Category, &event.Participants,
+		&event.ImageURLs, &event.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -62,7 +65,7 @@ func (r *EventPostgres) GetEventParticipants(ctx context.Context, eventId uuid.U
 	rows, err := r.db.Query(
 		ctx,
 		`SELECT u.id, u.email, u.nickname, u.phone
-		 FROM approved_participant ap
+		 FROM approved_participants ap
 		 JOIN users u ON ap.user_id = u.id
 		 WHERE ap.event_id = $1`,
 		eventId,
@@ -90,7 +93,7 @@ func (r *EventPostgres) GetEventParticipants(ctx context.Context, eventId uuid.U
 func (r *EventPostgres) DeleteEventById(ctx context.Context, eventId uuid.UUID) error {
 	_, err := r.db.Exec(
 		ctx,
-		`DELETE FROM event
+		`DELETE FROM events
 		 WHERE id = $1`,
 		eventId,
 	)
@@ -105,9 +108,9 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 	var args []interface{}
 	argIndex := 1
 
-	if event.EventName != "" {
+	if event.EventTitle != "" {
 		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIndex))
-		args = append(args, event.EventName)
+		args = append(args, event.EventTitle)
 		argIndex++
 	}
 
@@ -153,14 +156,18 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 		argIndex++
 	}
 
+	if event.ImageURLs != nil {
+		setClauses = append(setClauses, fmt.Sprintf("image_urls = $%d", argIndex))
+		args = append(args, event.ImageURLs)
+		argIndex++
+	}
+
 	if len(setClauses) == 0 {
 		return nil
 	}
 
 	query := fmt.Sprintf(
-		`UPDATE event
-		 SET %s
-		 WHERE id = $%d`,
+		`UPDATE events SET %s WHERE id = $%d`,
 		strings.Join(setClauses, ", "),
 		argIndex,
 	)
@@ -179,8 +186,8 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int) ([
 	var events []models.Event
 	rows, err := r.db.Query(
 		ctx,
-		`SELECT id, name, description, start_date, end_date, creator_id, location, category_id, participants
-		 FROM event
+		`SELECT id, title, description, start_date, end_date, creator_id, location, category_id, participant_count
+		 FROM events
 		 ORDER BY id
 		 LIMIT $1
 		 OFFSET $2`,
@@ -195,7 +202,7 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int) ([
 	for rows.Next() {
 		var event models.Event
 		if err = rows.Scan(
-			&event.EventID, &event.EventName, &event.Description, &event.StartDate, &event.EndDate,
+			&event.EventID, &event.EventTitle, &event.Description, &event.StartDate, &event.EndDate,
 			&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants,
 		); err != nil {
 			return nil, err
