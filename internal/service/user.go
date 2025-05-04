@@ -24,6 +24,8 @@ func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model
 }
 
 func (s *UserService) CreateUser(ctx context.Context, user *models.User) error {
+	user.UserID = uuid.New()
+
 	return s.repo.CreateUser(ctx, user)
 }
 

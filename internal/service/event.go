@@ -11,10 +11,11 @@ import (
 type EventService struct {
 	repo     repository.Event
 	userRepo repository.User
+	catRepo  repository.Category
 }
 
-func NewEventService(repo repository.Event) *EventService {
-	return &EventService{repo: repo}
+func NewEventService(repo repository.Event, userRepo repository.User, catRepo repository.Category) *EventService {
+	return &EventService{repo: repo, userRepo: userRepo, catRepo: catRepo}
 }
 
 func (s *EventService) CreateEvent(ctx context.Context, event *models.Event) error {
@@ -26,9 +27,15 @@ func (s *EventService) CreateEvent(ctx context.Context, event *models.Event) err
 		return errors.New("creator does not exist")
 	}
 
-	if event.Category.CategoryID == uuid.Nil {
-		return errors.New("category doesine does not exist")
+	category, err := s.catRepo.GetCategoryByID(ctx, event.Category.CategoryID)
+	if err != nil {
+		return err
 	}
+	if category == nil {
+		return errors.New("category does not exist")
+	}
+
+	event.EventID = uuid.New()
 
 	return s.repo.CreateEvent(ctx, event)
 }

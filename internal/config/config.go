@@ -15,7 +15,7 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	cfg := &Config{}
-	err := cleanenv.ReadConfig("./configs/local.env", &cfg)
+	err := cleanenv.ReadConfig("./configs/local.env", cfg)
 	fmt.Println(err)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)

@@ -16,6 +16,7 @@ func NewReviewsService(repo repository.Reviews) *ReviewsService {
 }
 
 func (s *ReviewsService) CreateReviewForEvent(ctx context.Context, review *models.Review) error {
+	review.ReviewID = uuid.New()
 	return s.repo.CreateReviewForEvent(ctx, review)
 }
 

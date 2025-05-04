@@ -12,6 +12,7 @@ type Service struct {
 	Reviews
 	Event
 	User
+	Category
 	TokenManager
 }
 
@@ -50,11 +51,24 @@ type User interface {
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 }
 
+type Category interface {
+	GetCategories(ctx context.Context) ([]models.Category, error)
+	GetCategoryByID(ctx context.Context, categoryID uuid.UUID) (*models.Category, error)
+
+	CreateCategory(ctx context.Context, category *models.Category) error
+
+	UpdateCategory(ctx context.Context, category *models.Category) error
+
+	DeleteCategory(ctx context.Context, categoryID uuid.UUID) error
+}
+
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		TokenManager: NewTokenManagerService(time.Minute * 300),
-		Reviews:      NewReviewsService(repos),
-		Event:        NewEventService(repos),
-		User:         NewUserService(repos),
+
+		Reviews:  NewReviewsService(repos.Reviews),
+		Event:    NewEventService(repos.Event, repos.User, repos.Category),
+		Category: NewCategoryService(repos.Category),
+		User:     NewUserService(repos.User),
 	}
 }

@@ -4,11 +4,13 @@ info:
   version: 1.0.12
 tags:
   - name: events
-    description: Event operations
+    description: Events operations
   - name: users
-    description: User operations
+    description: Users operations
   - name: reviews
-    description: Review operations
+    description: Reviews operations
+  - name: categories
+    description: Categories operations
 paths:
   /events:
     post:
@@ -62,7 +64,7 @@ paths:
           description: Events not found
 
 
-  /event/{id}:
+  /events/{id}:
     get:
       tags:
         - events
@@ -175,7 +177,7 @@ paths:
         '404':
           description: Event not found
 
-  /event/{id}/participants:
+  /events/{id}/participants:
     get:
       tags:
         - events
@@ -360,6 +362,151 @@ paths:
         '404':
           description: Event not found
 
+  /categories:
+    post:
+      tags:
+        - categories
+      summary: Добавление категории
+      description: Добавление новой категории
+      operationId: createCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+        required: true
+      responses:
+        '201':
+          description: Successfully created
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+        # default:
+        #   description: Unexpected error
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: "#/components/schemas/Error"
+    get:
+      tags:
+        - categories
+      summary: Получить все категории
+      description: Возвращает все категории
+      operationId: getAllCategories
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid ID
+        '404':
+          description: Events not found
+
+
+  /categories/{id}:
+    get:
+      tags:
+        - categories
+      summary: Получить категорию по UUID
+      description: Возвращает категорию по UUID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: getCategoryByUUID
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid ID
+        '404':
+          description: Category not found
+
+    put:
+      tags:
+        - categories
+      summary: Обновление категории
+      description: Обновление категории по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: updateCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+        required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid ID
+        '404':
+          description: Category not found
+        '422':
+          description: Validation exception
+        # default:
+        #   description: Unexpected error
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - categories
+      summary: Удалить категорию по UUID
+      description: Удаляет одну категорию
+      parameters:
+        - name: id
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: deleteCategory
+      responses:
+        '200':
+          description: Successful operation
+          content: {}
+        '400':
+          description: Invalid ID
+        '404':
+          description: Category not found
+
+
 components:
   schemas:
     Event:
@@ -369,7 +516,7 @@ components:
           type: string
           format: uuid
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
-        name:
+        event_title:
           type: string
           example: Карнавал
         description:
@@ -384,21 +531,33 @@ components:
           type: string
           example: 2025-04-10T16:45:00.000Z
           nullable: true
-        creator_id:
-          type: string
-          format: uuid
-          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b7
+
+        creator:
+          $ref: '#/components/schemas/User'
         location:
           type: string
         category_id:
           type: string
           format: uuid
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
-        participants:
+        participant_count:
           description: Количество участников
           type: integer
           example: 10
           nullable: true
+        image_urls:
+          type: array
+          items:
+            type: string
+          example:
+            - https://example.com/image1.jpg
+            - https://example.com/image2.jpg
+        created_at:
+          description: Дата и время окончания
+          type: string
+          example: 2025-04-10T16:45:00.000Z
+          nullable: true
+
 
     User:
       type: object
@@ -415,7 +574,7 @@ components:
           format: password
         nickname:
           type: string
-    
+
     Review:
       type: object
       properties:
@@ -432,15 +591,16 @@ components:
         score:
           type: number
           format: float
-    
-    
+
+    Category:
+      type: object
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        category_name:
+          type: string
+          example: "Спорт"
 
 
 
-
-
-
-    api_key:
-      type: apiKey
-      name: api_key
-      in: header

@@ -11,6 +11,7 @@ type Repository struct {
 	Reviews
 	Event
 	User
+	Category
 }
 
 type Reviews interface {
@@ -41,10 +42,22 @@ type User interface {
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 }
 
+type Category interface {
+	GetCategories(ctx context.Context) ([]models.Category, error)
+	GetCategoryByID(ctx context.Context, categoryID uuid.UUID) (*models.Category, error)
+
+	CreateCategory(ctx context.Context, category *models.Category) error
+
+	UpdateCategory(ctx context.Context, category *models.Category) error
+
+	DeleteCategory(ctx context.Context, categoryID uuid.UUID) error
+}
+
 func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{
-		Reviews: NewReviewsPostgres(db),
-		Event:   NewEventPostgres(db),
-		User:    NewUserPostgres(db),
+		Reviews:  NewReviewsPostgres(db),
+		Event:    NewEventPostgres(db),
+		User:     NewUserPostgres(db),
+		Category: NewCategoryPostgres(db),
 	}
 }

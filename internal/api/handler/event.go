@@ -15,8 +15,6 @@ func (h *Handler) CreateEventHandler(ctx *gin.Context) {
 		return
 	}
 
-	event.EventID = uuid.New()
-
 	if err := h.services.Event.CreateEvent(ctx, &event); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -71,10 +69,21 @@ func (h *Handler) DeleteEventById(ctx *gin.Context) {
 
 func (h *Handler) UpdateEvent(ctx *gin.Context) {
 	var event models.Event
+
+	eventIDParam := ctx.Param("id")
+
+	eventID, err := uuid.Parse(eventIDParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for event ID"})
+		return
+	}
+
 	if err := ctx.ShouldBindJSON(&event); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	event.EventID = eventID
 
 	if err := h.services.Event.UpdateEvent(ctx, &event); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
