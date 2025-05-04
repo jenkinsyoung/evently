@@ -48,6 +48,10 @@ func (s *EventService) GetEventById(ctx context.Context, eventId uuid.UUID) (*mo
 	if event == nil {
 		return nil, errors.New("event not found")
 	}
+
+	cat, _ := s.catRepo.GetCategoryByID(ctx, event.Category.CategoryID)
+	event.Category.CategoryName = cat.CategoryName
+
 	return event, nil
 }
 

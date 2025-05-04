@@ -240,6 +240,30 @@ paths:
         '404':
           description: Event not found
 
+  /users:
+    post:
+      tags:
+        - users
+      summary: Добавление пользователя
+      description: Регистрация пользователя
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        '201':
+          description: Successfully created
+          content: {}
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+
+
   /users/{userID}:
     get:
       tags:
@@ -297,6 +321,29 @@ paths:
           description: Invalid input
         '422':
           description: Validation exception
+
+    delete:
+      tags:
+        - users
+      summary: Удалить пользователя по UUID
+      description: Удаляет пользователя
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: deleteUser
+      responses:
+        '200':
+          description: Successful operation
+          content: {}
+        '400':
+          description: Invalid ID
+        '404':
+          description: User not found
 
 
 
@@ -536,10 +583,8 @@ components:
           $ref: '#/components/schemas/User'
         location:
           type: string
-        category_id:
-          type: string
-          format: uuid
-          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+        category:
+          $ref: '#/components/schemas/Category'
         participant_count:
           description: Количество участников
           type: integer
@@ -573,6 +618,8 @@ components:
           type: string
           format: password
         nickname:
+          type: string
+        phone:
           type: string
 
     Review:

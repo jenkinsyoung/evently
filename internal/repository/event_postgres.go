@@ -27,7 +27,7 @@ func (r *EventPostgres) CreateEvent(ctx context.Context, event *models.Event) er
 			creator_id, location, category_id, participant_count, image_urls
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		event.EventID, event.EventTitle, event.Description, event.StartDate, event.EndDate,
-		event.Creator.UserID, event.Location, event.Category, event.Participants,
+		event.Creator.UserID, event.Location, event.Category.CategoryID, event.Participants,
 		event.ImageURLs,
 	)
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *EventPostgres) GetEventById(ctx context.Context, eventId uuid.UUID) (*m
 		eventId,
 	).Scan(
 		&event.EventID, &event.EventTitle, &event.Description, &event.StartDate, &event.EndDate,
-		&event.Creator.UserID, &event.Location, &event.Category, &event.Participants,
+		&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants,
 		&event.ImageURLs, &event.CreatedAt,
 	)
 	if err != nil {
@@ -109,7 +109,7 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 	argIndex := 1
 
 	if event.EventTitle != "" {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIndex))
+		setClauses = append(setClauses, fmt.Sprintf("title = $%d", argIndex))
 		args = append(args, event.EventTitle)
 		argIndex++
 	}
@@ -151,7 +151,7 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 	}
 
 	if event.Participants != 0 {
-		setClauses = append(setClauses, fmt.Sprintf("participants = $%d", argIndex))
+		setClauses = append(setClauses, fmt.Sprintf("participant_count = $%d", argIndex))
 		args = append(args, event.Participants)
 		argIndex++
 	}
@@ -166,11 +166,13 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 		return nil
 	}
 
-	query := fmt.Sprintf(
-		`UPDATE events SET %s WHERE id = $%d`,
-		strings.Join(setClauses, ", "),
-		argIndex,
-	)
+	query := "UPDATE events SET " + strings.Join(setClauses, ", ") + fmt.Sprintf(" WHERE id = $%d", argIndex)
+
+	//query := fmt.Sprintf(
+	//	`UPDATE events SET %s WHERE id = $%d`,
+	//	strings.Join(setClauses, ", "),
+	//	argIndex,
+	//)
 
 	args = append(args, event.EventID)
 
@@ -186,13 +188,13 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int) ([
 	var events []models.Event
 	rows, err := r.db.Query(
 		ctx,
-		`SELECT id, title, description, start_date, end_date, creator_id, location, category_id, participant_count
+		`SELECT id, title, description, start_date, end_date, creator_id, location, category_id, participant_count, image_urls, created_at
 		 FROM events
 		 ORDER BY id
 		 LIMIT $1
 		 OFFSET $2`,
 		pageSize,
-		page*pageSize,
+		(page-1)*pageSize,
 	)
 	if err != nil {
 		return nil, err
@@ -203,7 +205,7 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int) ([
 		var event models.Event
 		if err = rows.Scan(
 			&event.EventID, &event.EventTitle, &event.Description, &event.StartDate, &event.EndDate,
-			&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants,
+			&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants, &event.ImageURLs, &event.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
