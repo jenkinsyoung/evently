@@ -35,7 +35,7 @@ func main() {
 
 	repos := repository.NewRepository(database.Db)
 	services := service.NewService(repos)
-	handlers := handler.NewHandler(services)
+	handlers := handler.NewHandler(services, &log)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.RestServerPort,
@@ -46,6 +46,7 @@ func main() {
 	signal.Notify(graceCh, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
+		log.Info("starting the server", zap.String("port", cfg.RestServerPort))
 		if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			defer database.Db.Close()
 			log.Error("shutting down the server", zap.Error(err))

@@ -2,15 +2,17 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/jenkinsyoung/evently/internal/logger"
 	"github.com/jenkinsyoung/evently/internal/service"
 )
 
 type Handler struct {
 	services *service.Service
+	log      *logger.Logger
 }
 
-func NewHandler(services *service.Service) *Handler {
-	return &Handler{services: services}
+func NewHandler(services *service.Service, log *logger.Logger) *Handler {
+	return &Handler{services: services, log: log}
 }
 
 func (h *Handler) InitRoutes() *gin.Engine {
