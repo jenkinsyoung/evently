@@ -21,14 +21,14 @@ func (r *UserPostgres) GetEventsForUser(ctx context.Context, userID uuid.UUID, i
 
 	if isCreator {
 		query = `SELECT 
-				e.id, e.name, e.description, e.start_date, e.end_date, e.location, e.participants,
+				e.id, e.name, e.description, e.start_date, e.end_date, e.location, e.participant_count,
 				c.id, c.name
 				FROM events e 
 				JOIN categories c ON e.category_id = c.id
 				WHERE creator_id = $1`
 	} else {
 		query = `SELECT 
-				e.id, e.name, e.description, e.start_date, e.end_date, e.location, e.participants,
+				e.id, e.name, e.description, e.start_date, e.end_date, e.location, e.participant_count,
 				c.id, c.name
 				FROM events e 
     			JOIN approved_participants ap ON ap.event_id = e.id
@@ -69,7 +69,7 @@ func (r *UserPostgres) GetUserByID(ctx context.Context, userID uuid.UUID) (*mode
 	var user models.User
 
 	row := r.db.QueryRow(ctx, "SELECT * FROM users WHERE id = $1", userID)
-	err := row.Scan(&user.UserID, &user.Email, &user.Password, &user.Nickname, &user.Phone)
+	err := row.Scan(&user.UserID, &user.Email, &user.Password, &user.Nickname, user.Phone)
 	if err != nil {
 		return nil, err
 	}

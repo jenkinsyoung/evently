@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+const (
+	accessTTL  = 30 * time.Minute
+	refreshTTL = 30 * 24 * time.Hour
+)
+
 type TokenManagerService struct {
 	accessTokenTTL time.Duration
 }
@@ -23,6 +28,7 @@ type Claims struct {
 }
 
 var AccessSigningKey = os.Getenv("SECRET_KEY_ACCESS")
+var RefreshSigningKey = os.Getenv("SECRET_KEY_REFRESH")
 
 func NewTokenManagerService(ttl time.Duration) *TokenManagerService {
 	return &TokenManagerService{accessTokenTTL: ttl}

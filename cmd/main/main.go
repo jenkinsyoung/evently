@@ -38,7 +38,7 @@ func main() {
 	handlers := handler.NewHandler(services, &log)
 
 	srv := &http.Server{
-		Addr:    ":" + cfg.RestServerPort,
+		Addr:    ":" + cfg.RestServerPort, //TODO: читать хост с конфига
 		Handler: handlers.InitRoutes(),
 	}
 

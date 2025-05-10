@@ -19,6 +19,14 @@ func NewEventService(repo repository.Event, userRepo repository.User, catRepo re
 }
 
 func (s *EventService) CreateEvent(ctx context.Context, event *models.Event) error {
+	if event.StartDate == nil {
+		return errors.New("start date is required")
+	}
+
+	if event.EndDate != nil && event.EndDate.Before(*event.StartDate) {
+		return errors.New("end date must be after start date")
+	}
+
 	creator, err := s.userRepo.GetUserByID(ctx, event.Creator.UserID)
 	if err != nil {
 		return err
