@@ -28,7 +28,7 @@ func main() {
 		panic("failed to create logger: " + err.Error())
 	}
 
-	database, err := db.NewPostgresDB(cfg.DBConfig)
+	database, err := db.NewPostgresDB(cfg.DBConfig, "./migration/migration.sql")
 	if err != nil {
 		panic("failed to create database connection: " + err.Error())
 	}
