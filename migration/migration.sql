@@ -81,6 +81,9 @@ ALTER TABLE
 ALTER TABLE
     "reviews" ADD CONSTRAINT "reviews_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
 
+INSERT INTO "public"."users" ("id", "email", "nickname", "password") VALUES ('593790a2-c5d6-4e74-855a-de61706a88f7', 'poloshkova.a.y@edu.mirea.ru', 'Anastasia', '123'), ('fdff6946-e86c-46f2-a81c-19c3a1dfabaf', 'mail@mail.com', 'user_11274da6', '123');
+INSERT INTO "public"."categories" ("id", "name") VALUES ('0251ad88-cfa2-4646-9cef-b87d32b55005', 'Хобби и творчество'), ('0296cc23-6c03-4be9-a2a7-e1bf39dd7ac2', 'Экскурсии и путешествия'), ('53114d71-fb63-426f-b20f-70063e79e06f', 'Вечеринки'), ('5a82c8bc-9b19-418d-b4c6-25384f22323a', 'Концерт'), ('5a8bf55c-c5f8-442c-aa43-f271885a8603', 'Искусство и культура'), ('99d018a9-b7e6-4987-9f56-6b1679248336', 'Другие развлечения'), ('c000d02b-5ac2-4950-b544-7cc0aa74616c', 'Для детей');
+
 INSERT INTO "public"."events"
 ("id", "title", "description", "start_date", "end_date", "creator_id", "location", "category_id", "participant_count", "image_urls", "created_at")
 VALUES
@@ -117,5 +120,3 @@ VALUES
  '{https://ytitnwyszqopaqcuemat.supabase.co/storage/v1/object/public/eventimages/1744449628270.jpg}',
  '2025-04-12 12:20:29.644695+00');
 
-INSERT INTO "public"."categories" ("id", "name") VALUES ('0251ad88-cfa2-4646-9cef-b87d32b55005', 'Хобби и творчество'), ('0296cc23-6c03-4be9-a2a7-e1bf39dd7ac2', 'Экскурсии и путешествия'), ('53114d71-fb63-426f-b20f-70063e79e06f', 'Вечеринки'), ('5a82c8bc-9b19-418d-b4c6-25384f22323a', 'Концерт'), ('5a8bf55c-c5f8-442c-aa43-f271885a8603', 'Искусство и культура'), ('99d018a9-b7e6-4987-9f56-6b1679248336', 'Другие развлечения'), ('c000d02b-5ac2-4950-b544-7cc0aa74616c', 'Для детей');
-INSERT INTO "public"."users" ("id", "email", "nickname", "password") VALUES ('593790a2-c5d6-4e74-855a-de61706a88f7', 'poloshkova.a.y@edu.mirea.ru', 'Anastasia', '123'), ('fdff6946-e86c-46f2-a81c-19c3a1dfabaf', 'mail@mail.com', 'user_11274da6', '123');
