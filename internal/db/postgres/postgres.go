@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -21,8 +22,10 @@ type DB struct {
 }
 
 func NewPostgresDB(cfg DBConfig, migrationFile string) (*DB, error) {
+	escapedPassword := url.QueryEscape(cfg.Password)
+
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?pool_max_conns=20",
-		cfg.UserName, cfg.Password, cfg.Host, cfg.Port, cfg.DbName)
+		cfg.UserName, escapedPassword, cfg.Host, cfg.Port, cfg.DbName)
 
 	dbPool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
@@ -41,8 +44,10 @@ func NewPostgresDB(cfg DBConfig, migrationFile string) (*DB, error) {
 }
 
 func createDatabaseAndMigrate(cfg DBConfig, migrationFile string) (*DB, error) {
+	escapedPassword := url.QueryEscape(cfg.Password)
+
 	adminDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?pool_max_conns=20",
-		cfg.UserName, cfg.Password, cfg.Host, cfg.Port)
+		cfg.UserName, escapedPassword, cfg.Host, cfg.Port)
 
 	adminPool, err := pgxpool.New(context.Background(), adminDSN)
 	if err != nil {
@@ -50,14 +55,14 @@ func createDatabaseAndMigrate(cfg DBConfig, migrationFile string) (*DB, error) {
 	}
 	defer adminPool.Close()
 
-	_, err = adminPool.Exec(context.Background(), fmt.Sprintf("CREATE DATABASE %s", "evently"))
+	_, err = adminPool.Exec(context.Background(), fmt.Sprintf("CREATE DATABASE %s", cfg.DbName))
 	if err != nil {
 		return nil, fmt.Errorf("%v Unable to create database: %v\n", os.Stderr, err)
 	}
 
 	// Now connect to the new database
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?pool_max_conns=20",
-		cfg.UserName, cfg.Password, cfg.Host, cfg.Port, "evently")
+		cfg.UserName, escapedPassword, cfg.Host, cfg.Port, cfg.DbName)
 
 	dbPool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
