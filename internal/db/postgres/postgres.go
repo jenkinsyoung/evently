@@ -29,14 +29,15 @@ func NewPostgresDB(cfg DBConfig, migrationFile string) (*DB, error) {
 
 	dbPool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
-		if strings.Contains(err.Error(), "does not exist") {
-			return createDatabaseAndMigrate(cfg, migrationFile)
-		}
 		return nil, fmt.Errorf("%v Unable to create connection pool: %v\n", os.Stderr, err)
 	}
 
 	err = dbPool.Ping(context.Background())
 	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return createDatabaseAndMigrate(cfg, migrationFile)
+		}
+
 		return nil, fmt.Errorf("%v Unable to ping database: %v\n", os.Stderr, err)
 	}
 
