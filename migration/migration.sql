@@ -19,8 +19,8 @@ CREATE TABLE "events"(
     "id" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NULL,
-    "start_date" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
-    "end_date" TIMESTAMP(0) WITHOUT TIME ZONE NULL,
+    "start_date" TIMESTAMP(0) WITH TIME ZONE NOT NULL,
+    "end_date" TIMESTAMP(0) WITH TIME ZONE NULL,
     "creator_id" UUID NULL,
     "location" TEXT NULL,
     "category_id" UUID NULL,
@@ -52,7 +52,7 @@ CREATE TABLE "reviews"(
     "user_id" UUID NOT NULL,
     "event_id" UUID NOT NULL,
     "description" TEXT NOT NULL,
-    "score" FLOAT(53) NOT NULL
+    "score" DOUBLE PRECISION NOT NULL
 );
 ALTER TABLE
     "reviews" ADD PRIMARY KEY("id");
