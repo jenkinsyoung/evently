@@ -1,7 +1,8 @@
 import 'package:evently/app/features/about/AboutPage.dart';
 import 'package:evently/app/features/home/widgets/EventUI.dart';
+import 'package:evently/app/shared/models/models.dart';
+import 'package:evently/app/shared/services/go_service_api.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
@@ -17,17 +18,17 @@ class MapEventPage extends StatefulWidget {
 }
 
 class _MapEventPageState extends State<MapEventPage> {
-  bool? switchValue = true;
+  bool? switchValue = false;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final DraggableScrollableController _draggableController = DraggableScrollableController();
-  List<Map<String, dynamic>> events = [];
+  List<Event> _allEvents = [];
   bool isLoading = true;
+  final ApiService _apiService = ApiService();
 
-  MapController _mapController = MapController();
-  LatLng _initialCenter = LatLng(55.751244, 37.618423); // Москва
-  List<Marker> _markers = [];
+  final MapController _mapController = MapController();
+  final LatLng _initialCenter = const LatLng(55.751244, 37.618423);
+  final List<Marker> _markers = [];
 
-  final supabase = Supabase.instance.client;
 
   @override
   void initState() {
@@ -38,25 +39,16 @@ class _MapEventPageState extends State<MapEventPage> {
   Future<void> _fetchEvents() async {
     try {
       setState(() => isLoading = true);
-      final query = supabase
-          .from('events')
-          .select('''
-            *,
-            creator:users!event_creator_id_fkey(*),
-            participants:users!approved_participant(*),
-            category_id:category!inner(name)
-          ''')
-          .order('start_date', ascending: true);
+      final events = await _apiService.getEvents();
 
-      final List<dynamic> response = await query;
       setState(() {
-        events = response.cast<Map<String, dynamic>>();
+        _allEvents = events;
         isLoading = false;
       });
 
       for (var event in events) {
-        final address = event['location'];
-        if (address != null && address.toString().isNotEmpty) {
+        final address = event.location;
+        if (address.toString().isNotEmpty) {
           await _addMarkerForEvent(address, event);
         }
       }
@@ -67,7 +59,9 @@ class _MapEventPageState extends State<MapEventPage> {
       });
     }
   }
-  Future<void> _addMarkerForEvent(String address, Map<String, dynamic> event) async {
+
+
+  Future<void> _addMarkerForEvent(String address, Event event) async {
     try {
       List<Location> locations = await locationFromAddress(address);
       if (locations.isNotEmpty) {
@@ -79,14 +73,27 @@ class _MapEventPageState extends State<MapEventPage> {
               width: 40,
               height: 40,
               point: latLng,
-              child: IconButton(onPressed:(){
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AboutEventPage(event: event),
-                ),
-              );}, icon: Icon(Icons.location_pin, color: Colors.red, size: 40))
+              child: GestureDetector(onTap:(){
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AboutEventPage(eventId: event.id),
+                    ),
+                  );
+                },
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      image: DecorationImage(
+                        fit: BoxFit.cover,
+                        image: NetworkImage(event.imageUrls[0]),
+                      ),
+                    ),
+                  )
+              )
             ),
           );
         });
@@ -96,7 +103,8 @@ class _MapEventPageState extends State<MapEventPage> {
     }
   }
 
-
+  final double minSize = 0.15;
+  final double maxSize = 0.7;
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -124,7 +132,7 @@ class _MapEventPageState extends State<MapEventPage> {
                         TileLayer(
                           urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                           subdomains: ['a', 'b', 'c'],
-                          userAgentPackageName: 'com.example.evently', // Замени на своё
+                          userAgentPackageName: 'com.example.evently',
                         ),
                         MarkerLayer(markers: _markers),
                       ],
@@ -137,19 +145,19 @@ class _MapEventPageState extends State<MapEventPage> {
               Positioned.fill(
                 child: NotificationListener<DraggableScrollableNotification>(
                   onNotification: (notification) {
-                    // Можно добавить логику при изменении размера плашки
                     return true;
                   },
                   child: DraggableScrollableSheet(
                     controller: _draggableController,
-                    initialChildSize: 0.15, // Начальный размер (15% экрана)
-                    minChildSize: 0.15, // Минимальный размер
-                    maxChildSize: 0.7, // Максимальный размер
+                    initialChildSize: 0.4, // Начальный размер (15% экрана)
+                    minChildSize: 0.2, // Минимальный размер
+                    maxChildSize:0.8, // Максимальный размер
                     snap: true,
-                    snapSizes: [0.15, 0.4, 0.7],
+                    snapSizes: [0.2, 0.4, 0.8],
+
                     builder: (context, scrollController) {
                       return Container(
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Color(0xFFE17564),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(30),
@@ -164,39 +172,38 @@ class _MapEventPageState extends State<MapEventPage> {
                           ],
                         ),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Ручка для перетаскивания
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Container(
-                                width: 40,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.6),
-                                  borderRadius: BorderRadius.circular(2),
+                            // Ручка с GestureDetector
+                            GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onVerticalDragStart: (_) {},
+                              onVerticalDragUpdate: (details) {
+                                final newSize = _draggableController.size +
+                                    details.primaryDelta! / MediaQuery.of(context).size.height;
+                                _draggableController.jumpTo(
+                                  newSize.clamp(minSize, maxSize),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Container(
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.6),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
                                 ),
                               ),
                             ),
-
-                            // Заголовок
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: Text(
-                                'События рядом',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                            // Список событий
+                            SizedBox(height: 5),
+                            // Список
                             Expanded(
                               child: isLoading
-                                  ? Center(child: CircularProgressIndicator(color: Colors.white))
-                                  : events.isEmpty
-                                  ? Center(
+                                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                                  : _allEvents.isEmpty
+                                  ? const Center(
                                 child: Text(
                                   'Нет событий',
                                   style: TextStyle(color: Colors.white),
@@ -204,20 +211,17 @@ class _MapEventPageState extends State<MapEventPage> {
                               )
                                   : ListView.builder(
                                 controller: scrollController,
-                                itemCount: events.length,
+                                itemCount: _allEvents.length,
                                 itemBuilder: (context, index) {
-                                  final event = events[index];
+                                  final event = _allEvents[index];
                                   return Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Container(
                                       decoration: BoxDecoration(
-                                          color: Color(0xE3FFDDD8),
-                                          borderRadius: BorderRadius.circular(5)
+                                        color: const Color(0xE3FFDDD8),
+                                        borderRadius: BorderRadius.circular(5),
                                       ),
-
-                                      child: EventUIWidget(
-                                        event: event,
-                                      ),
+                                      child: EventUIWidget(event: event),
                                     ),
                                   );
                                 },
@@ -249,7 +253,7 @@ class _MapEventPageState extends State<MapEventPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            const Text(
               'Искать рядом со мной',
               style: TextStyle(
                 fontFamily: 'Montserrat',
@@ -265,7 +269,7 @@ class _MapEventPageState extends State<MapEventPage> {
                   switchValue = newValue;
                 });
               },
-              activeColor: Color(0xFF872341),
+              activeColor: const Color(0xFF872341),
               activeTrackColor: Colors.white,
               inactiveTrackColor: Colors.grey[300],
               inactiveThumbColor: Colors.white,

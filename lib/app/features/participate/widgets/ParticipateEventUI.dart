@@ -1,4 +1,6 @@
 import 'package:evently/app/features/about/AboutPage.dart';
+import 'package:evently/app/features/home/widgets/EventUI.dart';
+import 'package:evently/app/shared/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,7 +28,7 @@ class ParticipateEventUIWidget extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AboutEventPage(event: event),
+              builder: (context) => AboutEventPage(eventId: event['id']),
             ),
           );
         },

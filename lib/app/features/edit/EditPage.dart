@@ -1,3 +1,4 @@
+import 'package:evently/app/shared/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,7 +10,7 @@ import 'package:mime/mime.dart';
 import 'package:path/path.dart' as path;
 
 class EditPage extends StatefulWidget {
-  final Map<String, dynamic> event;
+  final Event event;
 
   const EditPage({super.key, required this.event});
 
@@ -59,19 +60,19 @@ class _EditPageState extends State<EditPage> {
     // Initialize form with existing event data
     final event = widget.event;
 
-    _titleController.text = event['title'] ?? '';
-    _locationController.text = event['location'] ?? '';
-    _descriptionController.text = event['description'] ?? '';
-    _participantCount = event['participant_count'] ?? 0;
+    _titleController.text = event.title ?? '';
+    _locationController.text = event.location ?? '';
+    _descriptionController.text = event.description ?? '';
+    _participantCount = event.participantCount ?? 0;
 
     // Initialize category
-    if (event['category_id'] != null && event['category_id'] is Map) {
-      _selectedCategory = event['category_id']['name'];
+    if (event.creatorId != null && event.categoryId is Map) {
+      _selectedCategory = event.categoryId;
     }
 
     // Initialize dates
-    if (event['start_date'] != null) {
-      final startDate = DateTime.parse(event['start_date']);
+    if (event.startDate != null) {
+      final startDate = event.startDate;
       _selectedDate = startDate;
       _combinedStartDateTime = startDate;
       _dateController.text = DateFormat('dd.MM.yyyy').format(startDate);
@@ -79,18 +80,18 @@ class _EditPageState extends State<EditPage> {
       _timeController.text = DateFormat('HH:mm').format(startDate);
     }
 
-    if (event['end_date'] != null) {
-      final endDate = DateTime.parse(event['end_date']);
+    if (event.endDate != null) {
+      final endDate = event.endDate;
       _selectedEndDate = endDate;
       _combinedEndDateTime = endDate;
-      _dateEndController.text = DateFormat('dd.MM.yyyy').format(endDate);
+      _dateEndController.text = DateFormat('dd.MM.yyyy').format(endDate!);
       _selectedEndTime = TimeOfDay(hour: endDate.hour, minute: endDate.minute);
       _timeEndController.text = DateFormat('HH:mm').format(endDate);
     }
 
     // Initialize images
-    if (event['image_urls'] != null && event['image_urls'] is List) {
-      _existingImageUrls = List<String>.from(event['image_urls']);
+    if (event.imageUrls != null && event.imageUrls is List) {
+      _existingImageUrls = List<String>.from(event.imageUrls);
     }
   }
 
@@ -341,7 +342,7 @@ class _EditPageState extends State<EditPage> {
       await _supabase
           .from('events')
           .update(eventData)
-          .eq('id', widget.event['id']);
+          .eq('id', widget.event.id);
 
       // Success - navigate back
       Navigator.of(context).pop();
@@ -420,7 +421,7 @@ class _EditPageState extends State<EditPage> {
       await _supabase
           .from('events')
           .delete()
-          .eq('id', widget.event['id']);
+          .eq('id', widget.event.id);
 
       // 3. Navigate back with success
       if (mounted) {

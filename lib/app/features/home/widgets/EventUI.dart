@@ -1,24 +1,26 @@
+import 'dart:math';
+
 import 'package:evently/app/features/about/AboutPage.dart';
+import 'package:evently/app/shared/models/models.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class EventUIWidget extends StatelessWidget {
   const EventUIWidget({super.key, required this.event});
-  final Map<String, dynamic> event;
+  final Event event;
 
   @override
   Widget build(BuildContext context) {
     // Parse dates and times
-    final startDate = DateTime.parse(event['start_date']);
+    final startDate = event.startDate;
     final formattedDate = '${_weekdayName(startDate.weekday)} ${startDate.day.toString().padLeft(2, '0')}.${startDate.month.toString().padLeft(2, '0')} ${startDate.hour.toString().padLeft(2, '0')}:${startDate.minute.toString().padLeft(2, '0')}';
-    final location = event['location'] ?? 'Место не указано';
-    final creator = event['creator_id'] as String?;
-    final category = event['category_id'] as Map<String, dynamic>?;
+    final location = event.location ?? 'Место не указано';
+    final creator = event.creatorId as String?;
+    //final category = event.category_id as Map<String, dynamic>?;
 
     // Get first image if available
-    final imageUrl = (event['image_urls'] != null &&
-        (event['image_urls'] as List).isNotEmpty)
-        ? (event['image_urls'] as List).first
+    final imageUrl = (event.imageUrls != null &&
+        (event.imageUrls as List).isNotEmpty)
+        ? (event.imageUrls as List).first
         : 'https://lh6.googleusercontent.com/proxy/E_4xIlD15S0BvqPLy7KgJI9OYdRXU09tynxkqlnKkXIkFAJx59bYIxa1njKOx9O1oDeskDcAoH3GLA';
 
     return Container(
@@ -29,8 +31,6 @@ class EventUIWidget extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(5.0)
       ),
-
-      height: 136,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: InkWell(
@@ -38,7 +38,7 @@ class EventUIWidget extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => AboutEventPage(event: event),
+                builder: (context) => AboutEventPage(eventId: event.id,),
               ),
             );
           },
@@ -46,7 +46,7 @@ class EventUIWidget extends StatelessWidget {
             children: [
               Container(
                 width: 140,
-                // height: 105,
+                height: 120,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   image: DecorationImage(
@@ -62,7 +62,7 @@ class EventUIWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      event['title'] ?? 'Название мероприятия',
+                      event.title ?? 'Название мероприятия',
                       maxLines: 3,
                       style: const TextStyle(
                         fontFamily: 'Montserrat',

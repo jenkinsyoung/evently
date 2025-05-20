@@ -1,5 +1,6 @@
 import 'package:evently/app/features/create/CreatePage.dart';
 import 'package:evently/app/features/my_event/widgets/MyEventUI.dart';
+import 'package:evently/app/shared/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -322,7 +323,7 @@ class _MyEventsPageState extends State<MyEventsPage> {
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             vertical: 5, horizontal: 10),
-                        child: MyEventUIWidget(event: event),
+                        child: MyEventUIWidget(event: event as Event,),
                       );
                     },
                   ),

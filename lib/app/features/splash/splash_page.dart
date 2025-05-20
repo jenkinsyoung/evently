@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     final session = Supabase.instance.client.auth.currentSession;
 
-    if (session != null) {
+    if (session != null ) {
       // Пользователь авторизован
       Navigator.of(context).pushReplacementNamed('/home');
     } else {

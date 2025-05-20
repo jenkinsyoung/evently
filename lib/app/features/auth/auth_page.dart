@@ -40,7 +40,6 @@ class _AuthPageState extends State<AuthPage> {
           throw AuthException('Registration failed');
         }
 
-        // Дополнительная проверка создания профиля
         await _verifyUserProfile(supabase, response.user!.id, email);
       }
 

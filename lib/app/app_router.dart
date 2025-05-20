@@ -7,7 +7,7 @@ class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return MaterialPageRoute(builder: (_) => const App());
       case '/auth':
         return MaterialPageRoute(builder: (_) => const AuthPage());
       case '/home':

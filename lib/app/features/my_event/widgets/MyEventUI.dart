@@ -1,29 +1,31 @@
 import 'package:evently/app/features/about/AboutPage.dart';
 import 'package:evently/app/features/edit/EditPage.dart';
+import 'package:evently/app/shared/models/models.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class MyEventUIWidget extends StatelessWidget {
-  final Map<String, dynamic> event;
+  final Event event;
 
   const MyEventUIWidget({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
-    final String title = event['title'] ?? 'Без названия';
-    final String location = event['location'] ?? 'Место не указано';
-    final String imageUrl = (event['image_urls'] != null && event['image_urls'].isNotEmpty)
-        ? event['image_urls'][0]
+    final String title = event.title;
+    final String location = event.location;
+    final String imageUrl = (event.imageUrls != null && event.imageUrls.isNotEmpty)
+        ? event.imageUrls[0]
         : 'https://via.placeholder.com/150';
 
-    final DateTime? startDateTime =
-    event['start_date'] != null ? DateTime.tryParse(event['start_date']) : null;
+    final DateTime startDateTime = event.startDate;
 
-    final String formattedDate = startDateTime != null
-        ? '${_weekdayName(startDateTime.weekday)} ${startDateTime.day.toString().padLeft(2, '0')}.${startDateTime.month.toString().padLeft(2, '0')} ${startDateTime.hour.toString().padLeft(2, '0')}:${startDateTime.minute.toString().padLeft(2, '0')}'
-        : 'Дата не указана';
+    final String formattedDate;
+    if (startDateTime != '') {
+      formattedDate = '${_weekdayName(startDateTime.weekday)} ${startDateTime.day.toString().padLeft(2, '0')}.${startDateTime.month.toString().padLeft(2, '0')} ${startDateTime.hour.toString().padLeft(2, '0')}:${startDateTime.minute.toString().padLeft(2, '0')}';
+    } else {
+      formattedDate = 'Дата не указана';
+    }
 
-    final int participantCount = event['partisipants']?.length ?? 0;
+    final int participantCount = event.participantCount;
 
     return Container(
 
@@ -42,7 +44,7 @@ class MyEventUIWidget extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => AboutEventPage(event: event),
+                builder: (context) => AboutEventPage(eventId: event.id),
               ),
             );
           },
@@ -109,7 +111,7 @@ class MyEventUIWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Осталось ${event['participant_count'] - participantCount} мест',
+                      'Осталось ${event.participantCount - participantCount} мест',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.black87,

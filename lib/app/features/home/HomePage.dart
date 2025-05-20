@@ -1,6 +1,7 @@
 import 'package:evently/app/features/home/widgets/EventUI.dart';
+import 'package:evently/app/shared/models/models.dart';
+import 'package:evently/app/shared/services/go_service_api.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,75 +16,51 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   DateTime? _selectedDate;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  List<Map<String, dynamic>> _allEvents = [];
-  List<Map<String, dynamic>> _filteredEvents = [];
+  List<Event> _allEvents = [];
+  List<Event> _filteredEvents = [];
   bool _isLoading = true;
   bool _userPickedDate = false;
-  String? _selectedCategory;
-  List<String> _categories = [];
-
-  final _supabase = Supabase.instance.client;
+  String? _selectedCategoryId;
+  List<Category> _categories = [];
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
-    _fetchCategories();
-    _fetchEvents();
+    _loadInitialData();
   }
 
-  Future<void> _fetchCategories() async {
+  Future<void> _loadInitialData() async {
     try {
-      final response = await _supabase
-          .from('category')
-          .select('name')
-          .order('name', ascending: true);
-
-      setState(() {
-        _categories = (response as List).map((e) => e['name'] as String).toList();
-        _categories.insert(0, 'Все');
-      });
-    } catch (e) {
-      print('Error fetching categories: $e');
-    }
-  }
-
-  Future<void> _fetchEvents() async {
-    try {
-      setState(() => _isLoading = true);
+      final [events, categories] = await Future.wait([
+        _apiService.getEvents(),
+        _apiService.getCategories(),
+      ]);
       final now = DateTime.now();
-
-      final query = _supabase
-          .from('events')
-          .select('''
-            *,
-            creator:users!event_creator_id_fkey(*),
-            participants:users!approved_participant(*),
-            category_id:category!inner(name)
-          ''')
-          .order('start_date', ascending: true);
-
-      final List<dynamic> response = await query;
-
       setState(() {
-        _allEvents = response.cast<Map<String, dynamic>>();
-        _filteredEvents = List.from(_allEvents);
+        _allEvents = events as List<Event>;
+        _filteredEvents = events.where((event) {
+          final startDate = event.startDate;
+          final endDateString = event.endDate;
+
+          final endDate = endDateString ?? DateTime(startDate.year, startDate.month, startDate.day, 23, 59);
+
+          return endDate.isAfter(now);
+        }).toList();
+        _categories = categories as List<Category>;
         _isLoading = false;
       });
-      _applyFilters();
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching events: $e')),
-      );
-      print('Error details: $e');
+      _showErrorSnackbar('Ошибка загрузки данных: $e');
     }
   }
 
   void _applyFilters() {
-    List<Map<String, dynamic>> filtered = List.from(_allEvents);
+    List<Event> filtered = List.from(_allEvents);
 
-    // Фильтр по дате
+    // Date filter
     if (_userPickedDate && _selectedDate != null) {
       final startOfDay = DateTime(
         _selectedDate!.year,
@@ -93,19 +70,15 @@ class _HomePageState extends State<HomePage> {
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
       filtered = filtered.where((event) {
-        try {
-          final eventDate = DateTime.parse(event['start_date'] as String);
-          return eventDate.isAfter(startOfDay) && eventDate.isBefore(endOfDay);
-        } catch (e) {
-          return false;
-        }
+        return event.startDate.isAfter(startOfDay) &&
+            event.startDate.isBefore(endOfDay);
       }).toList();
     }
 
-    // Фильтр по категории
-    if (_selectedCategory != null && _selectedCategory != 'Все') {
+    // Category filter
+    if (_selectedCategoryId != null) {
       filtered = filtered.where((event) {
-        return event['category_id']?['name'] == _selectedCategory;
+        return event.categoryId == _selectedCategoryId;
       }).toList();
     }
 
@@ -138,22 +111,32 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               Expanded(
                 child: ListView(
-                  children: _categories.map((category) {
-                    return ListTile(
-                      title: Text(category),
-                      trailing: _selectedCategory == category ||
-                          (category == 'Все' && _selectedCategory == null)
+                  children: [
+                    ListTile(
+                      title: const Text('Все категории'),
+                      trailing: _selectedCategoryId == null
                           ? const Icon(Icons.check, color: Color(0xFF872341))
                           : null,
                       onTap: () {
-                        setState(() {
-                          _selectedCategory = category == 'Все' ? null : category;
-                        });
+                        setState(() => _selectedCategoryId = null);
                         _applyFilters();
                         Navigator.pop(context);
                       },
-                    );
-                  }).toList(),
+                    ),
+                    ..._categories.map((category) {
+                      return ListTile(
+                        title: Text(category.name),
+                        trailing: _selectedCategoryId == category.id
+                            ? const Icon(Icons.check, color: Color(0xFF872341))
+                            : null,
+                        onTap: () {
+                          setState(() => _selectedCategoryId = category.id);
+                          _applyFilters();
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
                 ),
               ),
             ],
@@ -201,9 +184,33 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _selectedDate = DateTime.now();
       _userPickedDate = false;
-      _selectedCategory = null;
+      _selectedCategoryId = null;
+      _filteredEvents = List.from(_allEvents.where((event) {
+        final startDate = event.startDate;
+        final endDateString = event.endDate;
+
+        final endDate = endDateString ?? DateTime(startDate.year, startDate.month, startDate.day, 23, 59);
+
+        return endDate.isAfter(DateTime.now());
+      }).toList());
     });
-    _applyFilters();
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  String? _getSelectedCategoryName() {
+    if (_selectedCategoryId == null) return null;
+    return _categories.firstWhere(
+          (cat) => cat.id == _selectedCategoryId,
+      orElse: () => Category(id: '', name: ''),
+    ).name;
   }
 
   @override
@@ -241,7 +248,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
-                        if (_userPickedDate || _selectedCategory != null)
+                        if (_userPickedDate || _selectedCategoryId != null)
                           IconButton(
                             icon: const Icon(Icons.close, color: Color(0xFF872341)),
                             onPressed: _resetFilters,
@@ -252,7 +259,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                if (_userPickedDate || _selectedCategory != null)
+                if (_userPickedDate || _selectedCategoryId != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
@@ -265,13 +272,13 @@ class _HomePageState extends State<HomePage> {
                               _applyFilters();
                             },
                           ),
-                        if (_selectedCategory != null)
+                        if (_selectedCategoryId != null)
                           Padding(
                             padding: const EdgeInsets.only(left: 8),
                             child: Chip(
-                              label: Text(_selectedCategory!),
+                              label: Text(_getSelectedCategoryName() ?? ''),
                               onDeleted: () {
-                                setState(() => _selectedCategory = null);
+                                setState(() => _selectedCategoryId = null);
                                 _applyFilters();
                               },
                             ),
@@ -284,17 +291,20 @@ class _HomePageState extends State<HomePage> {
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredEvents.isEmpty
                       ? const Center(child: Text('Нет мероприятий'))
-                      : ListView.builder(
-                    itemCount: _filteredEvents.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: EventUIWidget(
-                          event: _filteredEvents[index],
-                        ),
-                      );
-                    },
+                      : RefreshIndicator(
+                    onRefresh: _loadInitialData,
+                    child: ListView.builder(
+                      itemCount: _filteredEvents.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: EventUIWidget(
+                            event: _filteredEvents[index],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],

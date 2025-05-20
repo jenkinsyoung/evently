@@ -8,8 +8,6 @@ void main() async {
   await Supabase.initialize(
     url: 'https://ytitnwyszqopaqcuemat.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0aXRud3lzenFvcGFxY3VlbWF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4NTA4NzMsImV4cCI6MjA1OTQyNjg3M30.VIPmNeWWOsrk7ezDginy14bVMwOQduKM3wOPUan1YsM',
-
-
   );
 
   runApp(const MyApp());
