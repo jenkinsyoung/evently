@@ -69,7 +69,7 @@ func (r *UserPostgres) GetUserByID(ctx context.Context, userID uuid.UUID) (*mode
 	var user models.User
 
 	row := r.db.QueryRow(ctx, "SELECT * FROM users WHERE id = $1", userID)
-	err := row.Scan(&user.UserID, &user.Email, &user.Password, &user.Nickname, user.Phone)
+	err := row.Scan(&user.UserID, &user.Email, &user.Password, &user.Nickname, &user.Phone)
 	if err != nil {
 		return nil, err
 	}
