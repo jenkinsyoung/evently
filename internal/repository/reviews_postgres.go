@@ -37,7 +37,7 @@ func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uui
 	var reviews []models.Review
 
 	query := `SELECT r.id AS review_id,
-					r.text,
+					r.description,
 					r.score,
 					r.event_id,
 					u.id AS user_id,
