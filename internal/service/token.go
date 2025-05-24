@@ -72,7 +72,7 @@ func (s *TokenManagerService) GenerateToken(payload Payload, tokenType string) (
 	return signedToken, nil
 }
 
-func (s *TokenManagerService) ParseToken(tokenStr string, tokenType string) (*Payload, error) {
+func (s *TokenManagerService) ParseToken(tokenStr string, tokenType string) (*Claims, error) {
 	_, signingKey, err := s.CheckTokenType(tokenType)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (s *TokenManagerService) ParseToken(tokenStr string, tokenType string) (*Pa
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok {
-		return &Payload{}, errors.New("error in token claims")
+		return claims, errors.New("error in token claims")
 	}
-	return &claims.Payload, nil
+	return claims, nil
 }

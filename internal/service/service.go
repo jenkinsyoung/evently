@@ -27,7 +27,7 @@ type Authorization interface {
 
 type TokenManager interface {
 	GenerateToken(payload Payload, tokenType string) (string, error)
-	ParseToken(tokenStr string, tokenType string) (*Payload, error)
+	ParseToken(tokenStr string, tokenType string) (*Claims, error)
 }
 
 type Reviews interface {

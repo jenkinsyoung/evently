@@ -7,6 +7,7 @@ import (
 	"github.com/jenkinsyoung/evently/internal/models"
 	"github.com/jenkinsyoung/evently/internal/repository"
 	"github.com/jenkinsyoung/evently/internal/utils"
+	"time"
 )
 
 type AuthService struct {
@@ -78,19 +79,27 @@ func (s *AuthService) Login(ctx context.Context, user *models.User) (string, str
 }
 
 func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken string) (string, string, error) {
-	refreshPayload, err := s.tokenManager.ParseToken(refreshToken, TokenTypeRefresh)
+	refreshClaims, err := s.tokenManager.ParseToken(refreshToken, TokenTypeRefresh)
 	if err != nil {
 		return "", "", err
 	}
 
 	payload := Payload{
-		UserID: refreshPayload.UserID,
-		Role:   refreshPayload.Role,
+		UserID: refreshClaims.UserID,
+		Role:   refreshClaims.Role,
 	}
 
 	newAccessToken, err := s.tokenManager.GenerateToken(payload, TokenTypeAccess)
 	if err != nil {
 		return "", "", err
+	}
+
+	const refreshThreshold = 24 * time.Hour
+	if refreshClaims.ExpiresAt != nil {
+		timeLeft := time.Until(refreshClaims.ExpiresAt.Time)
+		if timeLeft > refreshThreshold {
+			return newAccessToken, refreshToken, nil
+		}
 	}
 
 	newRefreshToken, err := s.tokenManager.GenerateToken(payload, TokenTypeRefresh)
