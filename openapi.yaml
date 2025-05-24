@@ -11,8 +11,88 @@ tags:
     description: Reviews operations
   - name: categories
     description: Categories operations
+  - name: auth
+    description: Auth operations
+  - name: moderation
+    description: Moderation operations
 paths:
-  /events:
+
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: Регистрация пользователя
+      description: Регистрация пользователя
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      responses:
+        '201':
+          description: Успешная регистрация — возвращает access и refresh токены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Вход в аккаунт
+      description: Вход в аккаунт
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Успешный вход — возвращает access и refresh токены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+  /auth/refresh:
+    post:
+      tags:
+        - auth
+      summary: Обновление токенов
+      description: Обновление токенов по предоставленному refresh-токену
+      operationId: refreshTokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+        required: true
+      responses:
+        '200':
+          description: Успешное обновление — возвращает access и refresh токены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+  /api/events:
     post:
       tags:
         - events
@@ -31,8 +111,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                format: uuid
+                $ref: '#/components/schemas/Event'
         '400':
           description: Invalid input
         '422':
@@ -64,21 +143,21 @@ paths:
           description: Events not found
 
 
-  /events/{id}:
+  /api/events/{eventID}:
     get:
       tags:
         - events
       summary: Найти мероприятие по UUID
       description: Возвращает одно мероприятие
       parameters:
-        - name: id
+        - name: eventID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
           schema:
             type: string
             format: uuid
-      operationId: getEvent
+      operationId: getEventByUUID
       responses:
         '200':
           description: Successful operation
@@ -91,28 +170,7 @@ paths:
         '404':
           description: Event not found
 
-    post:
-      tags:
-        - events
-      summary: Зарегистрироваться на мероприятие
-      description: Пользователь регистрируется на мероприятие
-      parameters:
-        - name: id
-          in: path
-          required: true
-          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
-          schema:
-            type: string
-            format: uuid
-      operationId: registerUserForEvent
-      responses:
-        '200':
-          description: Successful operation
-          content: {}
-        '400':
-          description: Invalid ID
-        '404':
-          description: Event not found
+
 
     put:
       tags:
@@ -120,7 +178,7 @@ paths:
       summary: Обновление мероприятия
       description: Обновление мероприятия по ID
       parameters:
-        - name: id
+        - name: eventID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
@@ -160,7 +218,7 @@ paths:
       summary: Удалить мероприятие по UUID
       description: Удаляет одно мероприятие
       parameters:
-        - name: id
+        - name: eventID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
@@ -169,7 +227,7 @@ paths:
             format: uuid
       operationId: deleteEvent
       responses:
-        '200':
+        '204':
           description: Successful operation
           content: {}
         '400':
@@ -177,14 +235,15 @@ paths:
         '404':
           description: Event not found
 
-  /events/{id}/participants:
+
+  /api/events/{eventID}/participants:
     get:
       tags:
         - events
       summary: Получить всех участников мероприятия
       description: Возвращает всех участников
       parameters:
-        - name: id
+        - name: eventID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
@@ -206,26 +265,63 @@ paths:
         '404':
           description: Event not found
 
-  /users/{userID}/events:
-    get:
+  /api/events/{eventID}/attendance:
+    post:
       tags:
-        - users
-      summary: Получить мероприятия пользователя
-      description: Возвращает все мероприятия пользователя
+
+        - events
+      summary: Зарегистрироваться на мероприятие
+      description: Пользователь регистрируется на мероприятие
       parameters:
-        - name: userID
+        - name: eventID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
           schema:
             type: string
             format: uuid
-        - name: isCreator
-          in: query
+      operationId: registerUserForEvent
+      responses:
+        '200':
+          description: Successful operation
+          content: {}
+        '400':
+          description: Invalid ID
+        '404':
+          description: Event not found
+
+
+    delete:
+      tags:
+        - events
+      summary: Отменить участие в мероприятии
+      description: Пользователь отменяет участие в мероприятии
+      parameters:
+        - name: eventID
+          in: path
           required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
           schema:
-            type: boolean
-      operationId: getEventsForUser
+            type: string
+            format: uuid
+      operationId: deleteUserFromEvent
+      responses:
+        '200':
+          description: Successful operation
+          content: {}
+        '400':
+          description: Invalid ID
+        '404':
+          description: Event not found
+
+
+  /api/users/me/created-events:
+    get:
+      tags:
+        - users
+      summary: Получить мероприятия, созданные пользователем
+      description: Возвращает все мероприятия, созданные пользователя
+      operationId: getCreatedEventsForUser
       responses:
         '200':
           description: Successful operation
@@ -240,45 +336,13 @@ paths:
         '404':
           description: Event not found
 
-  /users:
-    post:
-      tags:
-        - users
-      summary: Добавление пользователя
-      description: Регистрация пользователя
-      operationId: createUser
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
-        required: true
-      responses:
-        '201':
-          description: Successfully created
-          content: {}
-        '400':
-          description: Invalid input
-        '422':
-          description: Validation exception
-
-
-
-  /users/{userID}:
+  /api/users/me/attended-events:
     get:
       tags:
         - users
-      summary: Получить пользователя
-      description: Возвращает пользователя
-      parameters:
-        - name: userID
-          in: path
-          required: true
-          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
-          schema:
-            type: string
-            format: uuid
-      operationId: getUserByID
+      summary: Получить мероприятия, в которых участвует пользователь
+      description: Возвращает все мероприятия, в которых участвует пользователь
+      operationId: getAttendedEventsForUser
       responses:
         '200':
           description: Successful operation
@@ -287,7 +351,28 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/User'
+                  $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid ID
+        '404':
+          description: Event not found
+
+
+
+  /api/users/me:
+    get:
+      tags:
+        - users
+      summary: Получить профиль текущего пользователя
+      description: Возвращает профиль текущего пользователя
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
         '400':
           description: Invalid ID
         '404':
@@ -296,17 +381,9 @@ paths:
     put:
       tags:
         - users
-      summary: Изменение пользователя
-      description: Изменение пользователя
-      parameters:
-        - name: userID
-          in: path
-          required: true
-          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
-          schema:
-            type: string
-            format: uuid
-      operationId: updateUser
+      summary: Изменение профиля текущего пользователя
+      description: Изменение профиля текущего пользователя
+      operationId: updateMyProfile
       requestBody:
         content:
           application/json:
@@ -316,7 +393,10 @@ paths:
       responses:
         '200':
           description: Successful operation
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
         '400':
           description: Invalid input
         '422':
@@ -325,19 +405,11 @@ paths:
     delete:
       tags:
         - users
-      summary: Удалить пользователя по UUID
-      description: Удаляет пользователя
-      parameters:
-        - name: userID
-          in: path
-          required: true
-          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
-          schema:
-            type: string
-            format: uuid
-      operationId: deleteUser
+      summary: Удалить мой аккаунт
+      description: Удаляет аккаунт текущего пользователя
+      operationId: deleteMyProfile
       responses:
-        '200':
+        '204':
           description: Successful operation
           content: {}
         '400':
@@ -348,7 +420,7 @@ paths:
 
 
 
-  /reviews/{eventID}:
+  /api/events/{eventID}/reviews:
     post:
       tags:
         - reviews
@@ -375,8 +447,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                format: uuid
+                $ref: '#/components/schemas/Review'
         '400':
           description: Invalid input
         '422':
@@ -409,37 +480,7 @@ paths:
         '404':
           description: Event not found
 
-  /categories:
-    post:
-      tags:
-        - categories
-      summary: Добавление категории
-      description: Добавление новой категории
-      operationId: createCategory
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Category'
-        required: true
-      responses:
-        '201':
-          description: Successfully created
-          content:
-            application/json:
-              schema:
-                type: string
-                format: uuid
-        '400':
-          description: Invalid input
-        '422':
-          description: Validation exception
-        # default:
-        #   description: Unexpected error
-        #   content:
-        #     application/json:
-        #       schema:
-        #         $ref: "#/components/schemas/Error"
+  /api/categories:
     get:
       tags:
         - categories
@@ -461,14 +502,14 @@ paths:
           description: Events not found
 
 
-  /categories/{id}:
+  /api/categories/{categoryID}:
     get:
       tags:
         - categories
       summary: Получить категорию по UUID
       description: Возвращает категорию по UUID
       parameters:
-        - name: id
+        - name: categoryID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
@@ -490,13 +531,40 @@ paths:
         '404':
           description: Category not found
 
+
+  /api/moderation/categories:
+    post:
+      tags:
+        - moderation
+      summary: Добавление категории
+      description: Добавление новой категории
+      operationId: createCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+        required: true
+      responses:
+        '201':
+          description: Successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+  /api/moderation/categories/{categoryID}:
     put:
       tags:
-        - categories
+        - moderation
       summary: Обновление категории
       description: Обновление категории по ID
       parameters:
-        - name: id
+        - name: categoryID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
@@ -523,20 +591,14 @@ paths:
           description: Category not found
         '422':
           description: Validation exception
-        # default:
-        #   description: Unexpected error
-        #   content:
-        #     application/json:
-        #       schema:
-        #         $ref: "#/components/schemas/Error"
 
     delete:
       tags:
-        - categories
+        - moderation
       summary: Удалить категорию по UUID
       description: Удаляет одну категорию
       parameters:
-        - name: id
+        - name: categoryID
           in: path
           required: true
           example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
@@ -545,13 +607,162 @@ paths:
             format: uuid
       operationId: deleteCategory
       responses:
-        '200':
+        '204':
           description: Successful operation
           content: {}
         '400':
           description: Invalid ID
         '404':
           description: Category not found
+
+  /api/moderation/events/{eventID}:
+    patch:
+      tags:
+        - moderation
+      summary: Проверить объявление
+      description: Проверка объявления
+      parameters:
+        - name: eventID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - 'Одобрено'
+                    - 'На модерации'
+                    - 'Отклонено'
+              required:
+                - status
+      responses:
+        '200':
+          description: Succesfull operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid ID
+
+  /api/moderation/users:
+    post:
+      tags:
+        - moderation
+      summary: Создание пользователя модератором
+      description: Модератор создаёт нового пользователя
+      operationId: moderationCreateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Пользователь успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+
+
+  /api/moderation/users/{userID}:
+    get:
+      tags:
+        - moderation
+      summary: Получить пользователя
+      description: Возвращает пользователя
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: getUserByID
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid ID
+        '404':
+          description: User not found
+
+    put:
+      tags:
+        - moderation
+      summary: Обновление пользователя модератором
+      description: Модератор обновляет данные пользователя
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: moderationUpdateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Пользователь успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+        '404':
+          description: User not found
+        '422':
+          description: Validation exception
+
+    delete:
+      tags:
+        - moderation
+      summary: Удалить пользователя по UUID
+      description: Удаляет пользователя
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          example: 42abcd2b-8b9c-4af9-88f7-0bc180cf74b4
+          schema:
+            type: string
+            format: uuid
+      operationId: deleteUser
+      responses:
+        '204':
+          description: Successful operation
+          content: {}
+        '400':
+          description: Invalid ID
+        '404':
+          description: User not found
 
 
 components:
@@ -597,6 +808,8 @@ components:
           example:
             - https://example.com/image1.jpg
             - https://example.com/image2.jpg
+        event_status:
+          type: string
         created_at:
           description: Дата и время окончания
           type: string
@@ -621,6 +834,13 @@ components:
           type: string
         phone:
           type: string
+        profile_pic_url:
+          type: string
+        user_role:
+          type: string
+          enum:
+            - 'ADMIN'
+            - 'USER'
 
     Review:
       type: object
@@ -638,6 +858,10 @@ components:
         score:
           type: number
           format: float
+        created_at:
+          description: Дата и время окончания
+          type: string
+          example: 2025-04-10T16:45:00.000Z
 
     Category:
       type: object
@@ -649,5 +873,61 @@ components:
           type: string
           example: "Спорт"
 
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required:
+        - email
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        nickname:
+          type: string
+      required:
+        - email
+        - password
+        - nickname
+
+    Tokens:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT для доступа к защищённым ресурсам
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        refresh_token:
+          type: string
+          description: Токен для получения нового accessToken
+          example: d1f3b4c5-6a7b-8c9d-0e1f-2a3b4c5d6e7f
+      required:
+        - access_token
+        - refresh_token
+
+    RefreshRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      required:
+        - refresh_token
 
 
+
+
+
+
+  

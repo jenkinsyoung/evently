@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/jenkinsyoung/evently/internal/models"
 	"github.com/jenkinsyoung/evently/internal/repository"
@@ -18,83 +19,114 @@ func NewEventService(repo repository.Event, userRepo repository.User, catRepo re
 	return &EventService{repo: repo, userRepo: userRepo, catRepo: catRepo}
 }
 
-func (s *EventService) CreateEvent(ctx context.Context, event *models.Event) error {
-	if event.StartDate == nil {
-		return errors.New("start date is required")
+func (s *EventService) AuthorizeUser(creatorID, userID uuid.UUID, isModerator bool) error {
+	if isModerator {
+		return nil
 	}
 
-	if event.EndDate != nil && event.EndDate.Before(*event.StartDate) {
-		return errors.New("end date must be after start date")
+	if creatorID != userID {
+		return fmt.Errorf("user %s is not allowed to update event", userID)
+	}
+
+	return nil
+}
+
+func (s *EventService) CreateEvent(ctx context.Context, event *models.Event) (*models.Event, error) {
+	//if event.StartDate == nil {
+	//	return nil, errors.New("start date is required")
+	//}
+
+	if event.EndDate != nil && event.EndDate.Before(event.StartDate) {
+		return nil, errors.New("end date must be after start date")
 	}
 
 	creator, err := s.userRepo.GetUserByID(ctx, event.Creator.UserID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if creator == nil {
-		return errors.New("creator does not exist")
+		return nil, errors.New("creator does not exist")
 	}
 
 	category, err := s.catRepo.GetCategoryByID(ctx, event.Category.CategoryID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if category == nil {
-		return errors.New("category does not exist")
+		return nil, errors.New("category does not exist")
 	}
 
 	event.EventID = uuid.New()
 
-	return s.repo.CreateEvent(ctx, event)
-}
-
-func (s *EventService) GetEventById(ctx context.Context, eventId uuid.UUID) (*models.Event, error) {
-	event, err := s.repo.GetEventById(ctx, eventId)
+	err = s.repo.CreateEvent(ctx, event)
 	if err != nil {
 		return nil, err
 	}
-	if event == nil {
-		return nil, errors.New("event not found")
+
+	return s.repo.GetEventByID(ctx, event.EventID)
+}
+
+func (s *EventService) GetEventByID(ctx context.Context, eventID uuid.UUID) (*models.Event, error) {
+	event, err := s.repo.GetEventByID(ctx, eventID)
+	if err != nil {
+		return nil, err
 	}
-
-	cat, _ := s.catRepo.GetCategoryByID(ctx, event.Category.CategoryID)
-	event.Category.CategoryName = cat.CategoryName
-
 	return event, nil
 }
 
-func (s *EventService) GetEventParticipants(ctx context.Context, eventId uuid.UUID) ([]models.User, error) {
-	event, err := s.repo.GetEventById(ctx, eventId)
-	if err != nil {
-		return nil, err
-	}
-	if event == nil {
-		return nil, errors.New("event not found")
-	}
-
-	participants, err := s.repo.GetEventParticipants(ctx, eventId)
+func (s *EventService) GetEventParticipants(ctx context.Context, eventID uuid.UUID) ([]models.User, error) {
+	participants, err := s.repo.GetEventParticipants(ctx, eventID)
 	if err != nil {
 		return nil, err
 	}
 	return participants, nil
 }
 
-func (s *EventService) DeleteEventById(ctx context.Context, eventId uuid.UUID) error {
-	event, err := s.repo.GetEventById(ctx, eventId)
+func (s *EventService) DeleteEventByID(ctx context.Context, eventID uuid.UUID, userID uuid.UUID, isModerator bool) error {
+	creatorID, err := s.repo.GetEventCreator(ctx, eventID)
 	if err != nil {
 		return err
 	}
-	if event == nil {
-		return errors.New("event not found")
+
+	err = s.AuthorizeUser(creatorID, userID, isModerator)
+	if err != nil {
+		return err
 	}
 
-	return s.repo.DeleteEventById(ctx, eventId)
+	return s.repo.DeleteEventByID(ctx, eventID)
 }
 
-func (s *EventService) UpdateEvent(ctx context.Context, event *models.Event) error {
-	return s.repo.UpdateEvent(ctx, event)
+func (s *EventService) UpdateEvent(ctx context.Context, event *models.Event, userID uuid.UUID, isModerator bool) (*models.Event, error) {
+	creatorID, err := s.repo.GetEventCreator(ctx, event.EventID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.AuthorizeUser(creatorID, userID, isModerator)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.UpdateEvent(ctx, event)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedEvent, err := s.repo.GetEventByID(ctx, event.EventID)
+	if err != nil {
+		return nil, err
+	}
+	return updatedEvent, nil
 }
 
-func (s *EventService) GetAllEvents(ctx context.Context, page, pageSize int) ([]models.Event, error) {
-	return s.repo.GetAllEvents(ctx, page, pageSize)
+func (s *EventService) GetAllEvents(ctx context.Context, page, pageSize int, isModerator bool) ([]models.Event, error) {
+	return s.repo.GetAllEvents(ctx, page, pageSize, isModerator)
+}
+
+func (s *EventService) AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error {
+	return s.repo.AttendToEvent(ctx, eventID, userID)
+}
+
+func (s *EventService) CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error {
+	return s.repo.AttendToEvent(ctx, eventID, userID)
 }

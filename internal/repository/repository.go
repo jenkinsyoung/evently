@@ -16,24 +16,36 @@ type Repository struct {
 
 type Reviews interface {
 	CreateReviewForEvent(ctx context.Context, review *models.Review) error
+
+	GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.Review, error)
+
 	GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.Review, error)
 }
 
 type Event interface {
 	CreateEvent(ctx context.Context, event *models.Event) error
 
-	GetEventById(ctx context.Context, eventId uuid.UUID) (*models.Event, error)
-	GetEventParticipants(ctx context.Context, eventId uuid.UUID) ([]models.User, error)
+	GetEventByID(ctx context.Context, eventID uuid.UUID) (*models.Event, error)
+	GetEventParticipants(ctx context.Context, eventID uuid.UUID) ([]models.User, error)
+	GetEventCreator(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
 
-	DeleteEventById(ctx context.Context, eventId uuid.UUID) error
+	DeleteEventByID(ctx context.Context, eventID uuid.UUID) error
 
 	UpdateEvent(ctx context.Context, event *models.Event) error
-	GetAllEvents(ctx context.Context, page, pageSize int) ([]models.Event, error)
+	GetAllEvents(ctx context.Context, page, pageSize int, isModerator bool) ([]models.Event, error)
+
+	AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error
+	CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error
+
+	CheckEvent(ctx context.Context, eventID uuid.UUID, status string) error
 }
 
 type User interface {
-	GetEventsForUser(ctx context.Context, userID uuid.UUID, isCreator bool) ([]models.Event, error)
+	GetCreatedEventsForUser(ctx context.Context, userID uuid.UUID) ([]models.Event, error)
+	GetAttendedEventsForUser(ctx context.Context, userID uuid.UUID) ([]models.Event, error)
+
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 
 	CreateUser(ctx context.Context, user *models.User) error
 
@@ -46,9 +58,9 @@ type Category interface {
 	GetCategories(ctx context.Context) ([]models.Category, error)
 	GetCategoryByID(ctx context.Context, categoryID uuid.UUID) (*models.Category, error)
 
-	CreateCategory(ctx context.Context, category *models.Category) error
+	CreateCategory(ctx context.Context, category *models.Category) (*models.Category, error)
 
-	UpdateCategory(ctx context.Context, category *models.Category) error
+	UpdateCategory(ctx context.Context, category *models.Category) (*models.Category, error)
 
 	DeleteCategory(ctx context.Context, categoryID uuid.UUID) error
 }

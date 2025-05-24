@@ -23,13 +23,13 @@ func (s *CategoryService) GetCategoryByID(ctx context.Context, categoryID uuid.U
 	return s.repo.GetCategoryByID(ctx, categoryID)
 }
 
-func (s *CategoryService) CreateCategory(ctx context.Context, category *models.Category) error {
+func (s *CategoryService) CreateCategory(ctx context.Context, category *models.Category) (*models.Category, error) {
 	category.CategoryID = uuid.New()
 
 	return s.repo.CreateCategory(ctx, category)
 }
 
-func (s *CategoryService) UpdateCategory(ctx context.Context, category *models.Category) error {
+func (s *CategoryService) UpdateCategory(ctx context.Context, category *models.Category) (*models.Category, error) {
 	return s.repo.UpdateCategory(ctx, category)
 }
 

@@ -2,10 +2,8 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jenkinsyoung/evently/internal/models"
 	"strings"
@@ -36,31 +34,45 @@ func (r *EventPostgres) CreateEvent(ctx context.Context, event *models.Event) er
 	return nil
 }
 
-func (r *EventPostgres) GetEventById(ctx context.Context, eventId uuid.UUID) (*models.Event, error) {
+func (r *EventPostgres) GetEventByID(ctx context.Context, eventID uuid.UUID) (*models.Event, error) {
 	var event models.Event
 	err := r.db.QueryRow(
 		ctx,
-		`SELECT id, title, description, start_date, end_date, 
-				creator_id, location, category_id, participant_count,
-				image_urls, created_at
-		 FROM events
-		 WHERE id = $1`,
-		eventId,
+		`SELECT e.id, 
+				e.title, 
+				e.description, 
+				e.start_date, 	
+				e.end_date, 
+				e.creator_id, 
+				e.location, 
+				e.category_id, 
+				e.participant_count, 
+				e.image_urls, 
+				e.created_at,
+				e.status,
+				c.name,
+				u.email, 
+				u.nickname, 
+				u.phone, 
+				u.profile_pic_url
+		 FROM events e
+		 JOIN categories c on e.category_id = c.id
+		 JOIN users u on u.id = e.creator_id
+		 WHERE e.id = $1`,
+		eventID,
 	).Scan(
 		&event.EventID, &event.EventTitle, &event.Description, &event.StartDate, &event.EndDate,
 		&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants,
-		&event.ImageURLs, &event.CreatedAt,
+		&event.ImageURLs, &event.CreatedAt, &event.Status, &event.Category.CategoryName,
+		&event.Creator.Email, &event.Creator.Nickname, &event.Creator.Phone, &event.Creator.ProfilePicture,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
-		}
 		return nil, err
 	}
 	return &event, nil
 }
 
-func (r *EventPostgres) GetEventParticipants(ctx context.Context, eventId uuid.UUID) ([]models.User, error) {
+func (r *EventPostgres) GetEventParticipants(ctx context.Context, eventID uuid.UUID) ([]models.User, error) {
 	var participants []models.User
 	rows, err := r.db.Query(
 		ctx,
@@ -68,7 +80,7 @@ func (r *EventPostgres) GetEventParticipants(ctx context.Context, eventId uuid.U
 		 FROM approved_participants ap
 		 JOIN users u ON ap.user_id = u.id
 		 WHERE ap.event_id = $1`,
-		eventId,
+		eventID,
 	)
 	if err != nil {
 		return nil, err
@@ -90,12 +102,24 @@ func (r *EventPostgres) GetEventParticipants(ctx context.Context, eventId uuid.U
 	return participants, nil
 }
 
-func (r *EventPostgres) DeleteEventById(ctx context.Context, eventId uuid.UUID) error {
+func (r *EventPostgres) GetEventCreator(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error) {
+	var creatorID uuid.UUID
+
+	err := r.db.QueryRow(
+		ctx,
+		`SELECT creator_id FROM events
+			WHERE id=$1
+			`, eventID).Scan(&creatorID)
+
+	return creatorID, err
+}
+
+func (r *EventPostgres) DeleteEventByID(ctx context.Context, eventID uuid.UUID) error {
 	_, err := r.db.Exec(
 		ctx,
 		`DELETE FROM events
 		 WHERE id = $1`,
-		eventId,
+		eventID,
 	)
 	if err != nil {
 		return err
@@ -114,7 +138,7 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 		argIndex++
 	}
 
-	if *event.Description != "" {
+	if event.Description != "" {
 		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIndex))
 		args = append(args, event.Description)
 		argIndex++
@@ -150,7 +174,7 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 		argIndex++
 	}
 
-	if *event.Participants != 0 {
+	if event.Participants != 0 {
 		setClauses = append(setClauses, fmt.Sprintf("participant_count = $%d", argIndex))
 		args = append(args, event.Participants)
 		argIndex++
@@ -168,12 +192,6 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 
 	query := "UPDATE events SET " + strings.Join(setClauses, ", ") + fmt.Sprintf(" WHERE id = $%d", argIndex)
 
-	//query := fmt.Sprintf(
-	//	`UPDATE events SET %s WHERE id = $%d`,
-	//	strings.Join(setClauses, ", "),
-	//	argIndex,
-	//)
-
 	args = append(args, event.EventID)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -184,16 +202,46 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 	return nil
 }
 
-func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int) ([]models.Event, error) {
+func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int, isModerator bool) ([]models.Event, error) {
 	var events []models.Event
 
 	rows, err := r.db.Query(
 		ctx,
-		`SELECT id, title, description, start_date, end_date, creator_id, location, category_id, participant_count, image_urls, created_at
-		 FROM events
-		 ORDER BY id
-		 LIMIT $1
-		 OFFSET $2`,
+		`
+			SELECT 
+				e.id, 
+				e.title, 
+				e.description, 
+				e.start_date, 	
+				e.end_date, 
+				e.creator_id, 
+				e.location, 
+				e.category_id, 
+				e.participant_count, 
+				e.image_urls, 
+				e.created_at,
+				e.status,
+				u.email, 
+				u.nickname, 
+				u.phone, 
+				u.profile_pic_url
+		
+			FROM events e
+			INNER JOIN users u ON u.id = e.creator_id
+		
+			WHERE 
+            -- модератор видит всё, обычный юзер только «Одобренные»
+            ($1 = TRUE OR e.status = 'Одобрено')
+			  AND 
+				-- отсекаем «просроченные»:
+				COALESCE(
+					e.end_date,
+					e.start_date + INTERVAL '23 hours 59 minutes 59 seconds'
+				) >= NOW()
+			ORDER BY 
+            	e.start_date ASC
+			LIMIT $2 OFFSET $3`,
+		isModerator,
 		pageSize,
 		(page-1)*pageSize,
 	)
@@ -209,7 +257,9 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int) ([
 
 		if err = rows.Scan(
 			&event.EventID, &event.EventTitle, &event.Description, &event.StartDate, &event.EndDate,
-			&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants, &event.ImageURLs, &event.CreatedAt,
+			&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants, &event.ImageURLs,
+			&event.CreatedAt, &event.Status,
+			&event.Creator.Email, &event.Creator.Nickname, &event.Creator.Phone, &event.Creator.ProfilePicture,
 		); err != nil {
 			return nil, err
 		}
@@ -221,4 +271,34 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int) ([
 	}
 
 	return events, nil
+}
+
+func (r *EventPostgres) AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error {
+	_, err := r.db.Exec(
+		ctx,
+		`INSERT INTO approved_participants (event_id, user_id) 
+				VALUES ($1, $2)`,
+		eventID, userID,
+	)
+
+	return err
+}
+
+func (r *EventPostgres) CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error {
+	_, err := r.db.Exec(
+		ctx,
+		`DELETE FROM approved_participants WHERE event_id=$1 AND user_id=$2`,
+		eventID, userID,
+	)
+
+	return err
+}
+
+func (r *EventPostgres) CheckEvent(ctx context.Context, eventID uuid.UUID, status string) error {
+	_, err := r.db.Exec(
+		ctx,
+		`UPDATE events SET status=$1 WHERE id=$2`,
+		status, eventID,
+	)
+	return err
 }

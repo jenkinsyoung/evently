@@ -66,24 +66,35 @@ func (r *CategoryPostgres) GetCategoryByID(ctx context.Context, categoryID uuid.
 	return &category, nil
 }
 
-func (r *CategoryPostgres) CreateCategory(ctx context.Context, category *models.Category) error {
-	_, err := r.db.Exec(
-		ctx,
-		`INSERT INTO categories (id, name) VALUES ($1, $2)`,
-		category.CategoryID, category.CategoryName,
-	)
+func (r *CategoryPostgres) CreateCategory(ctx context.Context, category *models.Category) (*models.Category, error) {
+	query := `INSERT INTO categories (id, name)
+			  VALUES ($1, $2)
+			  RETURNING id, name`
 
-	return err
+	row := r.db.QueryRow(ctx, query, category.CategoryID, category.CategoryName)
+
+	var created models.Category
+	if err := row.Scan(&created.CategoryID, &created.CategoryName); err != nil {
+		return nil, err
+	}
+
+	return &created, nil
 }
 
-func (r *CategoryPostgres) UpdateCategory(ctx context.Context, category *models.Category) error {
-	_, err := r.db.Exec(
-		ctx,
-		`UPDATE categories SET name=$1 WHERE id=$2`,
-		category.CategoryName, category.CategoryID,
-	)
+func (r *CategoryPostgres) UpdateCategory(ctx context.Context, category *models.Category) (*models.Category, error) {
+	query := `UPDATE categories
+			  SET name = $1
+			  WHERE id = $2
+			  RETURNING id, name`
 
-	return err
+	row := r.db.QueryRow(ctx, query, category.CategoryName, category.CategoryID)
+
+	var updated models.Category
+	if err := row.Scan(&updated.CategoryID, &updated.CategoryName); err != nil {
+		return nil, err
+	}
+
+	return &updated, nil
 }
 
 func (r *CategoryPostgres) DeleteCategory(ctx context.Context, categoryID uuid.UUID) error {

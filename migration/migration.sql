@@ -1,11 +1,23 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE TYPE event_status AS ENUM (
+    'Одобрено',
+    'На модерации',
+    'Отклонено'
+    );
+
+CREATE TYPE user_role AS ENUM (
+    'USER',
+    'ADMIN'
+);
+
 CREATE TABLE "users"(
-    "id" UUID NOT NULL,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "nickname" TEXT NOT NULL,
-    "phone" VARCHAR(20) NULL
+                        "id" UUID NOT NULL,
+                        "email" VARCHAR(255) NOT NULL,
+                        "password" VARCHAR(255) NOT NULL,
+                        "nickname" VARCHAR(255) NOT NULL,
+                        "phone" VARCHAR(20) NULL,
+                        "profile_pic_url" TEXT NOT NULL
 );
 ALTER TABLE
     "users" ADD PRIMARY KEY("id");
@@ -16,18 +28,18 @@ CREATE INDEX "users_nickname_index" ON
 CREATE INDEX "users_phone_index" ON
     "users"("phone");
 CREATE TABLE "events"(
-    "id" UUID NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT NULL,
-    "start_date" TIMESTAMP(0) WITH TIME ZONE NOT NULL,
-    "end_date" TIMESTAMP(0) WITH TIME ZONE NULL,
-    "creator_id" UUID NULL,
-    "location" TEXT NULL,
-    "category_id" UUID NULL,
-    "participant_count" INTEGER NULL,
-    "image_urls" TEXT[] NULL,
-    "created_at" TIMESTAMP(0) WITH
-        TIME zone NULL DEFAULT NOW()
+                         "id" UUID NOT NULL,
+                         "title" VARCHAR(255) NOT NULL,
+                         "description" TEXT NULL,
+                         "start_date" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+                         "end_date" TIMESTAMP(0) WITHOUT TIME ZONE NULL,
+                         "creator_id" UUID NULL,
+                         "location" TEXT NULL,
+                         "category_id" UUID NULL,
+                         "participant_count" INTEGER NULL,
+                         "image_urls" TEXT[] NULL,
+                         "created_at" TIMESTAMP(0) WITH
+                             TIME zone NULL DEFAULT 'now()'
 );
 ALTER TABLE
     "events" ADD PRIMARY KEY("id");
@@ -42,17 +54,19 @@ CREATE INDEX "events_location_index" ON
 CREATE INDEX "events_category_id_index" ON
     "events"("category_id");
 CREATE TABLE "categories"(
-    "id" UUID NOT NULL,
-    "name" TEXT NOT NULL
+                             "id" UUID NOT NULL,
+                             "name" VARCHAR(255) NOT NULL
 );
 ALTER TABLE
     "categories" ADD PRIMARY KEY("id");
 CREATE TABLE "reviews"(
-    "id" UUID NOT NULL,
-    "user_id" UUID NOT NULL,
-    "event_id" UUID NOT NULL,
-    "description" TEXT NOT NULL,
-    "score" DOUBLE PRECISION NOT NULL
+                          "id" UUID NOT NULL,
+                          "user_id" UUID NOT NULL,
+                          "event_id" UUID NOT NULL,
+                          "description" VARCHAR(255) NOT NULL,
+                          "score" REAL NOT NULL,
+                        "created_at" TIMESTAMP(0) WITH
+                              TIME zone NULL DEFAULT 'now()'
 );
 ALTER TABLE
     "reviews" ADD PRIMARY KEY("id");
@@ -61,8 +75,8 @@ CREATE INDEX "reviews_user_id_index" ON
 CREATE INDEX "reviews_event_id_index" ON
     "reviews"("event_id");
 CREATE TABLE "approved_participants"(
-    "event_id" UUID NOT NULL,
-    "user_id" UUID NOT NULL
+                                        "event_id" UUID NOT NULL,
+                                        "user_id" UUID NOT NULL
 );
 CREATE INDEX "approved_participants_event_id_index" ON
     "approved_participants"("event_id");
@@ -81,7 +95,16 @@ ALTER TABLE
 ALTER TABLE
     "reviews" ADD CONSTRAINT "reviews_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
 
-INSERT INTO "public"."users" ("id", "email", "nickname", "password") VALUES ('593790a2-c5d6-4e74-855a-de61706a88f7', 'poloshkova.a.y@edu.mirea.ru', 'Anastasia', '123'), ('fdff6946-e86c-46f2-a81c-19c3a1dfabaf', 'mail@mail.com', 'user_11274da6', '123');
+ALTER TABLE "events"
+    ADD COLUMN "status" event_status NOT NULL
+        DEFAULT 'На модерации';
+
+ALTER TABLE "users"
+    ADD COLUMN "role" user_role NOT NULL
+        DEFAULT 'USER';
+
+
+INSERT INTO "public"."users" ("id", "email", "nickname", "password", "phone", "profile_pic_url") VALUES ('593790a2-c5d6-4e74-855a-de61706a88f7', 'poloshkova.a.y@edu.mirea.ru', 'Anastasia', '$2a$10$gpM5Gg0kh8qOeKpsXtwhyuzidwlgCdxo4D1jEQYaRwkJN1rTn6cce', '88005553535', 'https://ytitnwyszqopaqcuemat.supabase.co/storage/v1/object/public/eventimages/1744405606927.jpg'), ('fdff6946-e86c-46f2-a81c-19c3a1dfabaf', 'mail@mail.ru', 'user_11274da6', '$2a$10$gpM5Gg0kh8qOeKpsXtwhyuzidwlgCdxo4D1jEQYaRwkJN1rTn6cce', '88005553535', 'https://ytitnwyszqopaqcuemat.supabase.co/storage/v1/object/public/eventimages/1744405606927.jpg');
 INSERT INTO "public"."categories" ("id", "name") VALUES ('0251ad88-cfa2-4646-9cef-b87d32b55005', 'Хобби и творчество'), ('0296cc23-6c03-4be9-a2a7-e1bf39dd7ac2', 'Экскурсии и путешествия'), ('53114d71-fb63-426f-b20f-70063e79e06f', 'Вечеринки'), ('5a82c8bc-9b19-418d-b4c6-25384f22323a', 'Концерт'), ('5a8bf55c-c5f8-442c-aa43-f271885a8603', 'Искусство и культура'), ('99d018a9-b7e6-4987-9f56-6b1679248336', 'Другие развлечения'), ('c000d02b-5ac2-4950-b544-7cc0aa74616c', 'Для детей');
 
 INSERT INTO "public"."events"

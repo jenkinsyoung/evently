@@ -9,68 +9,90 @@ import (
 )
 
 const (
+	TokenTypeAccess  = "access"
+	TokenTypeRefresh = "refresh"
+
 	accessTTL  = 30 * time.Minute
 	refreshTTL = 30 * 24 * time.Hour
 )
 
 type TokenManagerService struct {
-	accessTokenTTL time.Duration
+	accessTokenTTL  time.Duration
+	refreshTokenTTL time.Duration
 }
 
 type Payload struct {
-	UserId uuid.UUID `json:"user_id"`
+	UserID uuid.UUID `json:"user_id"`
 	Role   string    `json:"role"`
 }
 
 type Claims struct {
-	jwt.MapClaims
+	jwt.RegisteredClaims
 	Payload
 }
 
 var AccessSigningKey = os.Getenv("SECRET_KEY_ACCESS")
 var RefreshSigningKey = os.Getenv("SECRET_KEY_REFRESH")
 
-func NewTokenManagerService(ttl time.Duration) *TokenManagerService {
-	return &TokenManagerService{accessTokenTTL: ttl}
+func NewTokenManagerService() *TokenManagerService {
+	return &TokenManagerService{accessTokenTTL: accessTTL, refreshTokenTTL: refreshTTL}
 }
 
-func (s *TokenManagerService) GenerateJWTToken(payload Payload) (string, error) {
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
-		jwt.MapClaims{
-			"ExpiresAt": time.Now().Add(s.accessTokenTTL).Unix(),
-			"IssuedAt":  time.Now().Unix(),
-		},
-		payload,
-	}).SignedString([]byte(AccessSigningKey))
+func (s *TokenManagerService) CheckTokenType(tokenType string) (time.Duration, string, error) {
+	switch tokenType {
+	case TokenTypeAccess:
+		return accessTTL, AccessSigningKey, nil
+	case TokenTypeRefresh:
+		return refreshTTL, RefreshSigningKey, nil
+	default:
+		return 0, "", errors.New("invalid token type")
+	}
+}
+
+func (s *TokenManagerService) GenerateToken(payload Payload, tokenType string) (string, error) {
+	ttl, signingKey, err := s.CheckTokenType(tokenType)
 	if err != nil {
 		return "", err
 	}
-	return token, nil
+
+	claims := &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+		Payload: payload,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	signedToken, err := token.SignedString([]byte(signingKey))
+	if err != nil {
+		return "", err
+	}
+	return signedToken, nil
 }
 
-//func (s *TokenManagerService) GenerateRefreshToken(userID int64) (string, error) {
-//	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.MapClaims{
-//		"ExpiresAt": time.Now().Add(refreshTokenTTL).Unix(),
-//		"IssuedAt":  time.Now().Unix(),
-//		"user_id":   userID,
-//	}).SignedString([]byte(RefreshSigningKey))
-//	if err != nil {
-//		return "", err
-//	}
-//	return token, nil
-//}
+func (s *TokenManagerService) ParseToken(tokenStr string, tokenType string) (*Payload, error) {
+	_, signingKey, err := s.CheckTokenType(tokenType)
+	if err != nil {
+		return nil, err
+	}
 
-func (s *TokenManagerService) ParseJWTToken(accessToken string) (*Payload, error) {
 	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("invalid signing method")
 		}
 
-		return []byte(AccessSigningKey), nil
+		return []byte(signingKey), nil
 	})
+
 	if err != nil {
-		return &Payload{}, err
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("token is not valid")
 	}
 
 	claims, ok := token.Claims.(*Claims)
@@ -79,33 +101,3 @@ func (s *TokenManagerService) ParseJWTToken(accessToken string) (*Payload, error
 	}
 	return &claims.Payload, nil
 }
-
-//func (s *TokenManagerService) ParseRefreshToken(refreshToken string) (int64, error) {
-//	claims := &jwt.MapClaims{}
-//	token, err := jwt.ParseWithClaims(refreshToken, claims, func(token *jwt.Token) (interface{}, error) {
-//		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-//			return nil, errors.New("invalid signing method")
-//		}
-//
-//		return []byte(RefreshSigningKey), nil
-//	})
-//	if err != nil {
-//		return 0, err
-//	}
-//
-//	if !token.Valid {
-//		return 0, errors.New("token is not valid")
-//	}
-//
-//	userID, ok := (*claims)["user_id"]
-//	if !ok {
-//		return 0, errors.New("error in token claims")
-//	}
-//
-//	res, ok := userID.(int64)
-//	if !ok {
-//		return 0, errors.New("user_id claim has invalid type")
-//	}
-//
-//	return res, nil
-//}

@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) GetReviewsForEvent(c *gin.Context) {
-	eventIDParam := c.Param("id")
+	eventIDParam := c.Param("eventID")
 
 	eventID, err := uuid.Parse(eventIDParam)
 	if err != nil {
@@ -16,7 +16,7 @@ func (h *Handler) GetReviewsForEvent(c *gin.Context) {
 		return
 	}
 
-	reviews, err := h.services.Reviews.GetAllReviewsForEvent(c.Request.Context(), eventID)
+	reviews, err := h.services.Reviews.GetReviewsForEvent(c, eventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -28,7 +28,7 @@ func (h *Handler) GetReviewsForEvent(c *gin.Context) {
 func (h *Handler) CreateReviewForEvent(c *gin.Context) {
 	var review models.Review
 
-	eventIDParam := c.Param("id")
+	eventIDParam := c.Param("eventID")
 
 	eventID, err := uuid.Parse(eventIDParam)
 	if err != nil {
@@ -40,13 +40,13 @@ func (h *Handler) CreateReviewForEvent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
-	review.EventID = eventID
+	review.Event.EventID = eventID
 	review.ReviewID = uuid.New()
 
-	err = h.services.Reviews.CreateReviewForEvent(c.Request.Context(), &review)
+	createdReview, err := h.services.Reviews.CreateReviewForEvent(c, &review)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Successfully created"})
+	c.JSON(http.StatusCreated, createdReview)
 }

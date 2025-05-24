@@ -6,6 +6,11 @@ import (
 	"github.com/jenkinsyoung/evently/internal/service"
 )
 
+const (
+	AdminRole = "ADMIN"
+	UserRole  = "USER"
+)
+
 type Handler struct {
 	services *service.Service
 	log      *logger.Logger
@@ -20,44 +25,90 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 	router.Use(gin.Logger())
 
-	reviews := router.Group("/reviews")
+	auth := router.Group("/auth")
 	{
-		reviews.GET("/:id", h.GetReviewsForEvent)
-		reviews.POST("/:id", h.CreateReviewForEvent)
+		auth.POST("/register", h.Register)
+		auth.POST("/login", h.Login)
+		auth.POST("/refresh", h.RefreshTokens)
+
 	}
 
-	event := router.Group("/events")
+	api := router.Group("/api")
 	{
-		event.POST("", h.CreateEventHandler)
-		event.GET("/:id", h.GetEventById)
-		event.GET("/:id/participants", h.GetEventParticipants)
-		event.DELETE("/:id", h.DeleteEventById)
-		event.PUT("/:id", h.UpdateEvent)
-		event.GET("", h.GetAllEvents)
-	}
+		// ВСЕ /api/** требуют наличия валидного access-токена
+		api.Use(h.Authentication())
 
-	user := router.Group("/users")
-	{
-		user.GET("/:id/events", h.GetEventsForUser)
-		user.GET("/:id", h.GetUserByID)
+		// ---------- EVENTS ----------
+		event := api.Group("/events")
+		{
+			event.POST("", h.CreateEvent)
+			event.PUT("/:eventID", h.UpdateEvent)
+			event.DELETE("/:eventID", h.DeleteEventByID)
 
-		user.POST("", h.CreateUser)
+			event.GET("/:eventID", h.GetEventByID)
+			event.GET("/:eventID/participants", h.GetEventParticipants)
+			event.GET("", h.GetAllEvents)
 
-		user.PUT("/:id", h.UpdateUser)
+			// участие в мероприятии
+			attendance := event.Group("/:eventID/attendance")
+			{
+				attendance.POST("", h.AttendToEvent)
+				attendance.DELETE("", h.CancelAttendance)
+			}
 
-		user.DELETE("/:id", h.DeleteUser)
-	}
+			// ---------- REVIEWS ----------
+			reviews := event.Group("/:eventID/reviews")
+			{
+				reviews.GET("", h.GetReviewsForEvent)
+				reviews.POST("", h.CreateReviewForEvent)
+			}
+		}
 
-	category := router.Group("/categories")
-	{
-		category.GET("", h.GetCategories)
-		category.GET("/:id", h.GetCategoryByID)
+		// ---------- USERS ----------
+		user := api.Group("/users")
+		{
+			// профиль и события своего пользователя
 
-		category.POST("", h.CreateCategory)
+			user.GET("/me/created-events", h.GetCreatedEventsForUser)
+			user.GET("/me/attended-events", h.GetAttendedEventsForUser)
+			user.GET("/me", h.GetUserByID)
+			user.PUT("/me", h.UpdateUser)
+			user.DELETE("/me", h.DeleteUser)
 
-		category.PUT("/:id", h.UpdateCategory)
+		}
 
-		category.DELETE("/:id", h.DeleteCategory)
+		// ---------- CATEGORIES (доступно всем авторизованным) ----------
+		category := api.Group("/categories")
+		{
+			category.GET("", h.GetCategories)
+			category.GET("/:categoryID", h.GetCategoryByID)
+		}
+
+		// ---------- MODERATION (только для админов) ----------
+		moderation := api.Group("/moderation")
+		{
+			moderation.Use(h.Authorization(AdminRole))
+
+			// модерация объявлений
+			moderation.PATCH("/events/:eventID", h.CheckEvent)
+
+			// управление пользователями
+			userModeration := moderation.Group("/users")
+			{
+				userModeration.POST("", h.ModerationCreateUser)
+				userModeration.PUT("/:userID", h.ModerationUpdateUser)
+				userModeration.GET("/:userID", h.ModerationGetUserByID)
+				userModeration.DELETE("/:userID", h.ModerationDeleteUser)
+			}
+
+			// управление категориями
+			categoryModeration := moderation.Group("/categories")
+			{
+				categoryModeration.POST("", h.CreateCategory)
+				categoryModeration.PUT("/:categoryID", h.UpdateCategory)
+				categoryModeration.DELETE("/:categoryID", h.DeleteCategory)
+			}
+		}
 	}
 
 	return router

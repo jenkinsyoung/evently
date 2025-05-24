@@ -25,12 +25,45 @@ func (r *ReviewsPostgres) CreateReviewForEvent(ctx context.Context, review *mode
 		query,
 		review.ReviewID,
 		review.User.UserID,
-		review.EventID,
-		review.Text,
+		review.Event.EventID,
+		review.Description,
 		review.Score,
 	)
 
 	return err
+}
+
+func (r *ReviewsPostgres) GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.Review, error) {
+	var review models.Review
+
+	err := r.db.QueryRow(
+		ctx,
+		`SELECT r.id AS review_id,
+					r.description,
+					r.score,
+					r.event_id,
+					r.created_at,
+					u.id AS user_id,
+					u.email,
+					u.nickname,
+					u.profile_pic_url 
+				FROM reviews r 
+         		JOIN users u ON u.id = r.user_id
+				WHERE r.id = $1`,
+		reviewID,
+	).Scan(
+		&review.ReviewID,
+		&review.Description,
+		&review.Score,
+		&review.Event.EventID,
+		&review.CreatedAt,
+		&review.User.UserID,
+		&review.User.Email,
+		&review.User.Nickname,
+		&review.User.ProfilePicture,
+	)
+
+	return &review, err
 }
 
 func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.Review, error) {
@@ -40,10 +73,11 @@ func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uui
 					r.description,
 					r.score,
 					r.event_id,
+					r.created_at,
 					u.id AS user_id,
 					u.email,
 					u.nickname,
-					u.phone 
+					u.profile_pic_url 
 				FROM reviews r 
          		JOIN users u ON u.id = r.user_id
 				WHERE event_id = $1`
@@ -57,22 +91,24 @@ func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uui
 
 	for rows.Next() {
 		var review models.Review
-		var user models.User
 
 		err = rows.Scan(
 			&review.ReviewID,
-			&review.Text,
+			&review.Description,
 			&review.Score,
-			&review.EventID,
-			&user.UserID,
-			&user.Email,
-			&user.Nickname,
-			&user.Phone,
+			&review.Event.EventID,
+			&review.CreatedAt,
+			&review.User.UserID,
+			&review.User.Email,
+			&review.User.Nickname,
+			&review.User.ProfilePicture,
 		)
 
 		if err != nil {
 			return nil, err
 		}
+
+		reviews = append(reviews, review)
 	}
 
 	return reviews, nil

@@ -24,8 +24,39 @@ type DB struct {
 func NewPostgresDB(cfg DBConfig, migrationFile string) (*DB, error) {
 	escapedPassword := url.QueryEscape(cfg.Password)
 
+	adminDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?pool_max_conns=5",
+		cfg.UserName, escapedPassword, cfg.Host, cfg.Port)
+
+	adminPool, err := pgxpool.New(context.Background(), adminDSN)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create admin connection pool: %v", err)
+	}
+	defer adminPool.Close()
+
+	var exists bool
+	err = adminPool.QueryRow(context.Background(),
+		fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", cfg.DbName)).
+		Scan(&exists)
+	if err != nil {
+		return nil, fmt.Errorf("unable to check if database exists: %v", err)
+	}
+
+	if !exists {
+		return createDatabaseAndMigrate(cfg, migrationFile)
+	}
+
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?pool_max_conns=20",
 		cfg.UserName, escapedPassword, cfg.Host, cfg.Port, cfg.DbName)
+
+	//conn, err := pgx.Connect(context.Background(), dsn)
+	//if err != nil {
+	//	if strings.Contains(err.Error(), "does not exist") {
+	//		return createDatabaseAndMigrate(cfg, migrationFile)
+	//	}
+	//
+	//	return nil, fmt.Errorf("%v Unable to connect: %v\n", os.Stderr, err)
+	//}
+	//conn.Close(context.Background())
 
 	dbPool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
@@ -72,7 +103,9 @@ func createDatabaseAndMigrate(cfg DBConfig, migrationFile string) (*DB, error) {
 
 	// Run migration if migration file is provided
 	if migrationFile != "" {
+		fmt.Println("🔧 Starting migration...")
 		err = runMigration(dbPool, migrationFile)
+		fmt.Println("✅ Migration complete")
 		if err != nil {
 			return nil, fmt.Errorf("%v Migration failed: %v\n", os.Stderr, err)
 		}

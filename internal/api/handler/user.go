@@ -7,18 +7,84 @@ import (
 	"net/http"
 )
 
-func (h *Handler) GetEventsForUser(c *gin.Context) {
-	userIDParam := c.Param("id")
+func GetUserIDFromContext(c *gin.Context) (uuid.UUID, int, string) {
+	raw, exists := c.Get("userID")
+	if !exists {
+		return uuid.Nil, http.StatusUnauthorized, "unauthorized"
+	}
 
-	userID, err := uuid.Parse(userIDParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for user ID"})
+	userID, ok := raw.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, http.StatusInternalServerError, "invalid userID type"
+	}
+
+	return userID, http.StatusOK, ""
+}
+
+func (h *Handler) GetUserByID(c *gin.Context) {
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
 		return
 	}
 
-	isCreator := c.Query("isCreator") == "true"
+	user, err := h.services.User.GetUserByID(c, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-	events, err := h.services.User.GetEventsForUser(c.Request.Context(), userID, isCreator)
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *Handler) UpdateUser(c *gin.Context) {
+	var user models.User
+
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
+		return
+	}
+
+	if err := c.BindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	user.UserID = userID
+
+	updatedUser, err := h.services.User.UpdateUser(c, &user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedUser)
+}
+
+func (h *Handler) DeleteUser(c *gin.Context) {
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
+		return
+	}
+
+	err := h.services.User.DeleteUser(c, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) GetCreatedEventsForUser(c *gin.Context) {
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
+		return
+	}
+
+	events, err := h.services.User.GetCreatedEventsForUser(c, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -27,81 +93,18 @@ func (h *Handler) GetEventsForUser(c *gin.Context) {
 	c.JSON(http.StatusOK, events)
 }
 
-func (h *Handler) GetUserByID(c *gin.Context) {
-	userIDParam := c.Param("id")
-
-	userID, err := uuid.Parse(userIDParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for user ID"})
+func (h *Handler) GetAttendedEventsForUser(c *gin.Context) {
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
 		return
 	}
 
-	user, err := h.services.User.GetUserByID(c.Request.Context(), userID)
+	events, err := h.services.User.GetAttendedEventsForUser(c, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
-}
-
-func (h *Handler) CreateUser(c *gin.Context) {
-	var user models.User
-	var err error
-
-	if err = c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
-
-	err = h.services.User.CreateUser(c.Request.Context(), &user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "Successfully created"})
-}
-
-func (h *Handler) UpdateUser(c *gin.Context) {
-	var user models.User
-
-	userIDParam := c.Param("id")
-
-	userID, err := uuid.Parse(userIDParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for user ID"})
-		return
-	}
-
-	if err = c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
-
-	user.UserID = userID
-
-	err = h.services.User.UpdateUser(c.Request.Context(), &user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, user)
-}
-
-func (h *Handler) DeleteUser(c *gin.Context) {
-	userIDParam := c.Param("id")
-
-	userID, err := uuid.Parse(userIDParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for user ID"})
-		return
-	}
-
-	err = h.services.User.DeleteUser(c.Request.Context(), userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Successful operation"})
+	c.JSON(http.StatusOK, events)
 }

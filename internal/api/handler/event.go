@@ -8,112 +8,146 @@ import (
 	"strconv"
 )
 
-func (h *Handler) CreateEventHandler(ctx *gin.Context) {
+func (h *Handler) CreateEvent(c *gin.Context) {
 	var event models.Event
-	if err := ctx.ShouldBindJSON(&event); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&event); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.services.Event.CreateEvent(ctx, &event); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	createdEvent, err := h.services.Event.CreateEvent(c, &event)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "Event created successfully", "event": event})
+	c.JSON(http.StatusCreated, createdEvent)
 }
 
-func (h *Handler) GetEventById(ctx *gin.Context) {
-	eventId, err := uuid.Parse(ctx.Param("id"))
+func (h *Handler) GetEventByID(c *gin.Context) {
+	eventID, err := uuid.Parse(c.Param("eventID"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	event, err := h.services.Event.GetEventById(ctx, eventId)
+	event, err := h.services.Event.GetEventByID(c, eventID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"event": event})
+	c.JSON(http.StatusOK, event)
 }
 
-func (h *Handler) GetEventParticipants(ctx *gin.Context) {
-	eventId, err := uuid.Parse(ctx.Param("id"))
+func (h *Handler) GetEventParticipants(c *gin.Context) {
+	eventID, err := uuid.Parse(c.Param("eventID"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	participants, err := h.services.Event.GetEventParticipants(ctx, eventId)
+	participants, err := h.services.Event.GetEventParticipants(c, eventID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"participants": participants})
+	c.JSON(http.StatusOK, participants)
 }
 
-func (h *Handler) DeleteEventById(ctx *gin.Context) {
-	eventId, err := uuid.Parse(ctx.Param("id"))
+func (h *Handler) DeleteEventByID(c *gin.Context) {
+	eventID, err := uuid.Parse(c.Param("eventID"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if err := h.services.Event.DeleteEventById(ctx, eventId); err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
+		return
+	}
+
+	role, exists := c.Get("userRole")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	if err := h.services.Event.DeleteEventByID(c, eventID, userID, role == AdminRole); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
-func (h *Handler) UpdateEvent(ctx *gin.Context) {
+func (h *Handler) UpdateEvent(c *gin.Context) {
 	var event models.Event
 
-	eventIDParam := ctx.Param("id")
+	eventIDParam := c.Param("eventID")
 
 	eventID, err := uuid.Parse(eventIDParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for event ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for event ID"})
 		return
 	}
 
-	if err := ctx.ShouldBindJSON(&event); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
+		return
+	}
+
+	role, exists := c.Get("userRole")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&event); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	event.EventID = eventID
+	updatedEvent, err := h.services.Event.UpdateEvent(c, &event, userID, role == AdminRole)
 
-	if err := h.services.Event.UpdateEvent(ctx, &event); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Event updated successfully", "event": event})
+	c.JSON(http.StatusOK, updatedEvent)
 }
 
-func (h *Handler) GetAllEvents(ctx *gin.Context) {
-	page := ctx.DefaultQuery("page", "1")
-	pageSize := ctx.DefaultQuery("pageSize", "10")
+func (h *Handler) GetAllEvents(c *gin.Context) {
+	page := c.DefaultQuery("page", "1")
+	pageSize := c.DefaultQuery("pageSize", "10")
 
 	pageInt, err := strconv.Atoi(page)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
 		return
 	}
 
 	pageSizeInt, err := strconv.Atoi(pageSize)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pageSize parameter"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pageSize parameter"})
 		return
 	}
 
-	events, err := h.services.Event.GetAllEvents(ctx, pageInt, pageSizeInt)
+	role, exists := c.Get("userRole")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	events, err := h.services.Event.GetAllEvents(c, pageInt, pageSizeInt, role == AdminRole)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"events": events})
+	c.JSON(http.StatusOK, events)
 }
