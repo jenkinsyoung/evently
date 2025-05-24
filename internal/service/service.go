@@ -31,9 +31,9 @@ type TokenManager interface {
 }
 
 type Reviews interface {
-	CreateReviewForEvent(ctx context.Context, review *models.Review) (*models.Review, error)
+	CreateReviewForEvent(ctx context.Context, review *models.Review) (*models.ReviewResponse, error)
 
-	GetReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.Review, error)
+	GetReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.ReviewResponse, error)
 }
 
 type Event interface {

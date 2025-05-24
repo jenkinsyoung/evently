@@ -26,7 +26,7 @@ func (h *Handler) GetReviewsForEvent(c *gin.Context) {
 }
 
 func (h *Handler) CreateReviewForEvent(c *gin.Context) {
-	var review models.Review
+	var reviewReq models.ReviewRequest
 
 	eventIDParam := c.Param("eventID")
 
@@ -36,14 +36,26 @@ func (h *Handler) CreateReviewForEvent(c *gin.Context) {
 		return
 	}
 
-	if err = c.BindJSON(&review); err != nil {
+	if err = c.BindJSON(&reviewReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
-	review.Event.EventID = eventID
-	review.ReviewID = uuid.New()
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
+		return
+	}
 
-	createdReview, err := h.services.Reviews.CreateReviewForEvent(c, &review)
+	createdReview, err := h.services.Reviews.CreateReviewForEvent(c, &models.Review{
+		Event: models.Event{
+			EventID: eventID,
+		},
+		User: models.User{
+			UserID: userID,
+		},
+		Description: reviewReq.Description,
+		Score:       reviewReq.Score,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

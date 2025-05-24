@@ -33,8 +33,8 @@ func (r *ReviewsPostgres) CreateReviewForEvent(ctx context.Context, review *mode
 	return err
 }
 
-func (r *ReviewsPostgres) GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.Review, error) {
-	var review models.Review
+func (r *ReviewsPostgres) GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.ReviewResponse, error) {
+	var review models.ReviewResponse
 
 	err := r.db.QueryRow(
 		ctx,
@@ -55,7 +55,6 @@ func (r *ReviewsPostgres) GetReviewByID(ctx context.Context, reviewID uuid.UUID)
 		&review.ReviewID,
 		&review.Description,
 		&review.Score,
-		&review.Event.EventID,
 		&review.CreatedAt,
 		&review.User.UserID,
 		&review.User.Email,
@@ -66,13 +65,12 @@ func (r *ReviewsPostgres) GetReviewByID(ctx context.Context, reviewID uuid.UUID)
 	return &review, err
 }
 
-func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.Review, error) {
-	var reviews []models.Review
+func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.ReviewResponse, error) {
+	var reviews []models.ReviewResponse
 
 	query := `SELECT r.id AS review_id,
 					r.description,
 					r.score,
-					r.event_id,
 					r.created_at,
 					u.id AS user_id,
 					u.email,
@@ -90,13 +88,12 @@ func (r *ReviewsPostgres) GetAllReviewsForEvent(ctx context.Context, eventID uui
 	defer rows.Close()
 
 	for rows.Next() {
-		var review models.Review
+		var review models.ReviewResponse
 
 		err = rows.Scan(
 			&review.ReviewID,
 			&review.Description,
 			&review.Score,
-			&review.Event.EventID,
 			&review.CreatedAt,
 			&review.User.UserID,
 			&review.User.Email,

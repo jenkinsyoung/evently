@@ -83,17 +83,17 @@ CREATE INDEX "approved_participants_event_id_index" ON
 CREATE INDEX "approved_participants_user_id_index" ON
     "approved_participants"("user_id");
 ALTER TABLE
-    "approved_participants" ADD CONSTRAINT "approved_participants_event_id_foreign" FOREIGN KEY("event_id") REFERENCES "events"("id");
+    "approved_participants" ADD CONSTRAINT "approved_participants_event_id_foreign" FOREIGN KEY("event_id") REFERENCES "events"("id") ON DELETE CASCADE;
 ALTER TABLE
-    "reviews" ADD CONSTRAINT "reviews_event_id_foreign" FOREIGN KEY("event_id") REFERENCES "events"("id");
+    "reviews" ADD CONSTRAINT "reviews_event_id_foreign" FOREIGN KEY("event_id") REFERENCES "events"("id")  ON DELETE CASCADE;
 ALTER TABLE
-    "events" ADD CONSTRAINT "events_creator_id_foreign" FOREIGN KEY("creator_id") REFERENCES "users"("id");
+    "events" ADD CONSTRAINT "events_creator_id_foreign" FOREIGN KEY("creator_id") REFERENCES "users"("id") ON DELETE CASCADE;
 ALTER TABLE
-    "approved_participants" ADD CONSTRAINT "approved_participants_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
+    "approved_participants" ADD CONSTRAINT "approved_participants_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
 ALTER TABLE
-    "events" ADD CONSTRAINT "events_category_id_foreign" FOREIGN KEY("category_id") REFERENCES "categories"("id");
+    "events" ADD CONSTRAINT "events_category_id_foreign" FOREIGN KEY("category_id") REFERENCES "categories"("id") ON DELETE CASCADE;
 ALTER TABLE
-    "reviews" ADD CONSTRAINT "reviews_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
+    "reviews" ADD CONSTRAINT "reviews_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
 
 ALTER TABLE "events"
     ADD COLUMN "status" event_status NOT NULL
@@ -103,8 +103,37 @@ ALTER TABLE "users"
     ADD COLUMN "role" user_role NOT NULL
         DEFAULT 'USER';
 
+-- 1) Уникальность email в users
+ALTER TABLE "users"
+    ADD CONSTRAINT users_email_unique UNIQUE ("email");
 
-INSERT INTO "public"."users" ("id", "email", "nickname", "password", "phone", "profile_pic_url") VALUES ('593790a2-c5d6-4e74-855a-de61706a88f7', 'poloshkova.a.y@edu.mirea.ru', 'Anastasia', '$2a$10$gpM5Gg0kh8qOeKpsXtwhyuzidwlgCdxo4D1jEQYaRwkJN1rTn6cce', '88005553535', 'https://ytitnwyszqopaqcuemat.supabase.co/storage/v1/object/public/eventimages/1744405606927.jpg'), ('fdff6946-e86c-46f2-a81c-19c3a1dfabaf', 'mail@mail.ru', 'user_11274da6', '$2a$10$gpM5Gg0kh8qOeKpsXtwhyuzidwlgCdxo4D1jEQYaRwkJN1rTn6cce', '88005553535', 'https://ytitnwyszqopaqcuemat.supabase.co/storage/v1/object/public/eventimages/1744405606927.jpg');
+-- 2) Участников в events: по умолчанию 0, не может быть отрицательным
+ALTER TABLE "events"
+    ALTER COLUMN "participant_count" SET DEFAULT 0,
+    ALTER COLUMN "participant_count" SET NOT NULL;
+
+ALTER TABLE "events"
+    ADD CONSTRAINT events_participant_count_nonnegative
+        CHECK ("participant_count" >= 0);
+
+-- 3) Ограничение score в reviews от 0 до 5
+ALTER TABLE "reviews"
+    ADD CONSTRAINT reviews_score_range
+        CHECK ("score" >= 1 AND "score" <= 5);
+
+-- 4) Уникальные пары (user_id, event_id) в reviews
+ALTER TABLE "reviews"
+    ADD CONSTRAINT reviews_unique_user_event
+        UNIQUE ("user_id", "event_id");
+
+-- 5) Уникальные пары (user_id, event_id) в approved_participants
+ALTER TABLE "approved_participants"
+    ADD CONSTRAINT approved_participants_unique
+        UNIQUE ("user_id", "event_id");
+
+
+
+INSERT INTO "public"."users" ("id", "email", "nickname", "password", "phone", "profile_pic_url", "role") VALUES ('593790a2-c5d6-4e74-855a-de61706a88f7', 'poloshkova.a.y@edu.mirea.ru', 'Anastasia', '$2a$10$gpM5Gg0kh8qOeKpsXtwhyuzidwlgCdxo4D1jEQYaRwkJN1rTn6cce', '88005553535', 'https://ytitnwyszqopaqcuemat.supabase.co/storage/v1/object/public/eventimages/1744405606927.jpg'), ('fdff6946-e86c-46f2-a81c-19c3a1dfabaf', 'mail@mail.ru', 'user_11274da6', '$2a$10$gpM5Gg0kh8qOeKpsXtwhyuzidwlgCdxo4D1jEQYaRwkJN1rTn6cce', '88005553535', 'https://ytitnwyszqopaqcuemat.supabase.co/storage/v1/object/public/eventimages/1744405606927.jpg', 'ADMIN');
 INSERT INTO "public"."categories" ("id", "name") VALUES ('0251ad88-cfa2-4646-9cef-b87d32b55005', 'Хобби и творчество'), ('0296cc23-6c03-4be9-a2a7-e1bf39dd7ac2', 'Экскурсии и путешествия'), ('53114d71-fb63-426f-b20f-70063e79e06f', 'Вечеринки'), ('5a82c8bc-9b19-418d-b4c6-25384f22323a', 'Концерт'), ('5a8bf55c-c5f8-442c-aa43-f271885a8603', 'Искусство и культура'), ('99d018a9-b7e6-4987-9f56-6b1679248336', 'Другие развлечения'), ('c000d02b-5ac2-4950-b544-7cc0aa74616c', 'Для детей');
 
 INSERT INTO "public"."events"

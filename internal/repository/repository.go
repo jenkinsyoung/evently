@@ -17,9 +17,9 @@ type Repository struct {
 type Reviews interface {
 	CreateReviewForEvent(ctx context.Context, review *models.Review) error
 
-	GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.Review, error)
+	GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.ReviewResponse, error)
 
-	GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.Review, error)
+	GetAllReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.ReviewResponse, error)
 }
 
 type Event interface {

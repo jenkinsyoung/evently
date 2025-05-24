@@ -6,60 +6,48 @@ import (
 	"net/http"
 )
 
-func (h *Handler) AttendToEvent(ctx *gin.Context) {
-	eventIDParam := ctx.Param("eventID")
+func (h *Handler) AttendToEvent(c *gin.Context) {
+	eventIDParam := c.Param("eventID")
 
 	eventID, err := uuid.Parse(eventIDParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for event ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for event ID"})
 		return
 	}
 
-	rawUserID, exists := ctx.Get("userID")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
 		return
 	}
 
-	userID, ok := rawUserID.(uuid.UUID)
-	if !ok {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid userID type"})
+	if err = h.services.Event.AttendToEvent(c, eventID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err = h.services.Event.AttendToEvent(ctx, userID, eventID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.Status(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
-func (h *Handler) CancelAttendance(ctx *gin.Context) {
-	eventIDParam := ctx.Param("eventID")
+func (h *Handler) CancelAttendance(c *gin.Context) {
+	eventIDParam := c.Param("eventID")
 
 	eventID, err := uuid.Parse(eventIDParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for event ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID format for event ID"})
 		return
 	}
 
-	rawUserID, exists := ctx.Get("userID")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
 		return
 	}
 
-	userID, ok := rawUserID.(uuid.UUID)
-	if !ok {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid userID type"})
+	if err = h.services.Event.CancelAttendance(c, eventID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err = h.services.Event.CancelAttendance(ctx, userID, eventID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.Status(http.StatusOK)
+	c.Status(http.StatusOK)
 }
