@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-type Cursor struct {
-	LastStartDate time.Time
-	LastID        uuid.UUID
-}
-
 type Event struct {
 	EventID      uuid.UUID  `json:"event_id" db:"id" binding:"uuid"`
 	EventTitle   string     `json:"event_title,omitempty" db:"title" binding:"max=255"`
@@ -24,3 +19,9 @@ type Event struct {
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 	Status       string     `json:"event_status" db:"status"`
 }
+
+const (
+	EVENT_STATUS_APPROVED = "Одобрено"
+	EVENT_STATUS_PENDING  = "На модерации"
+	EVENT_STATUS_REJECTED = "Отклонено"
+)

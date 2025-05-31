@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jenkinsyoung/evently/internal/models"
+	specifications "github.com/jenkinsyoung/evently/internal/specification/event"
 	"strings"
 )
 
@@ -22,11 +23,11 @@ func (r *EventPostgres) CreateEvent(ctx context.Context, event *models.Event) er
 		ctx,
 		`INSERT INTO events (
 			id, title, description, start_date, end_date, 
-			creator_id, location, category_id, participant_count, image_urls
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			creator_id, location, category_id, participant_count, image_urls, status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		event.EventID, event.EventTitle, event.Description, event.StartDate, event.EndDate,
 		event.Creator.UserID, event.Location, event.Category.CategoryID, event.Participants,
-		event.ImageURLs,
+		event.ImageURLs, models.EVENT_STATUS_PENDING,
 	)
 	if err != nil {
 		return err
@@ -202,16 +203,8 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 	return nil
 }
 
-func (r *EventPostgres) GetAllEvents(
-	ctx context.Context,
-	cursor *models.Cursor,
-	pageSize int,
-	isModerator bool) ([]models.Event, *models.Cursor, error) {
-
-	var (
-		events  []models.Event
-		lastCur models.Cursor
-	)
+func (r *EventPostgres) GetAllEvents(ctx context.Context, paging *specifications.Paging, isModerator bool) ([]models.Event, error) {
+	var events []models.Event
 
 	query := `
 			SELECT 
@@ -230,42 +223,23 @@ func (r *EventPostgres) GetAllEvents(
 			WHERE 
             -- модератор видит всё, обычный юзер только «Одобренные»
             ($1 = TRUE OR e.status = 'Одобрено')
-			  AND 
-				-- отсекаем «просроченные»:
-				COALESCE(
-					e.end_date,
-					e.start_date + INTERVAL '23 hours 59 minutes 59 seconds'
-				) >= NOW()` //TODO: доделать пагинацию
+			`
+	if paging != nil {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", paging.GetLimit(), paging.GetOffset())
+	}
 
 	args := []interface{}{isModerator}
 
-	if cursor != nil {
-		query += `
-          AND (
-            e.start_date > $2
-            OR (e.start_date = $2 AND e.id > $3)
-          )
-        `
-		args = append(args, cursor.LastStartDate, cursor.LastID)
-		// Нумерация параметров продолжится с $4
-		args = append(args, pageSize)
-		query += ` ORDER BY e.start_date, e.id LIMIT $4`
-	} else {
-		// Без курсора — просто первые pageSize
-		args = append(args, pageSize)
-		query += ` ORDER BY e.start_date, e.id LIMIT $2`
-	}
-
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var ev models.Event
 
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&ev.EventID,
 			&ev.EventTitle,
 			&ev.StartDate,
@@ -276,21 +250,15 @@ func (r *EventPostgres) GetAllEvents(
 			&ev.ImageURLs,
 			&ev.Status,
 		); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		events = append(events, ev)
-		lastCur = models.Cursor{LastStartDate: ev.StartDate, LastID: ev.EventID}
 	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, err
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
-	// Если вернулось меньше, чем pageSize — данных больше нет
-	if len(events) < pageSize {
-		return events, nil, nil
-	}
-	// Иначе возвращаем курсор на последний элемент
-	return events, &lastCur, nil
+	return events, nil
 }
 
 func (r *EventPostgres) AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error {

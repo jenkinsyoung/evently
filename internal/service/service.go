@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jenkinsyoung/evently/internal/models"
 	"github.com/jenkinsyoung/evently/internal/repository"
+	specifications "github.com/jenkinsyoung/evently/internal/specification/event"
 )
 
 type Service struct {
@@ -48,7 +49,7 @@ type Event interface {
 
 	UpdateEvent(ctx context.Context, event *models.Event, userID uuid.UUID, isModerator bool) (*models.Event, error)
 
-	GetAllEvents(ctx context.Context, cursor *models.Cursor, pageSize int, isModerator bool) ([]models.Event, *models.Cursor, error)
+	GetAllEvents(ctx context.Context, paging *specifications.Paging, isModerator bool) ([]models.Event, error)
 
 	AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error
 	CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error

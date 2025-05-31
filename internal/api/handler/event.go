@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jenkinsyoung/evently/internal/models"
+	specifications "github.com/jenkinsyoung/evently/internal/specification/event"
 	"net/http"
 	"strconv"
 )
@@ -122,16 +123,13 @@ func (h *Handler) UpdateEvent(c *gin.Context) {
 }
 
 func (h *Handler) GetAllEvents(c *gin.Context) {
-	page := c.DefaultQuery("page", "1")
-	pageSize := c.DefaultQuery("pageSize", "10")
-
-	pageInt, err := strconv.Atoi(page)
+	page, err := strconv.ParseInt(c.Query("page"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
 		return
 	}
 
-	pageSizeInt, err := strconv.Atoi(pageSize)
+	pageSize, err := strconv.ParseInt(c.Query("pageSize"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pageSize parameter"})
 		return
@@ -143,7 +141,9 @@ func (h *Handler) GetAllEvents(c *gin.Context) {
 		return
 	}
 
-	events, err := h.services.Event.GetAllEvents(c, pageInt, pageSizeInt, role == AdminRole)
+	pg := specifications.NewPaging(&page, &pageSize)
+
+	events, err := h.services.Event.GetAllEvents(c, &pg, role == AdminRole)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

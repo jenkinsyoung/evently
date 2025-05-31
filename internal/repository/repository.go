@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jenkinsyoung/evently/internal/models"
+	specifications "github.com/jenkinsyoung/evently/internal/specification/event"
 )
 
 type Repository struct {
@@ -32,7 +33,7 @@ type Event interface {
 	DeleteEventByID(ctx context.Context, eventID uuid.UUID) error
 
 	UpdateEvent(ctx context.Context, event *models.Event) error
-	GetAllEvents(ctx context.Context, cursor *models.Cursor, pageSize int, isModerator bool) ([]models.Event, *models.Cursor, error)
+	GetAllEvents(ctx context.Context, pg *specifications.Paging, isModerator bool) ([]models.Event, error)
 
 	AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error
 	CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error

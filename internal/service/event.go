@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jenkinsyoung/evently/internal/models"
 	"github.com/jenkinsyoung/evently/internal/repository"
+	specifications "github.com/jenkinsyoung/evently/internal/specification/event"
 )
 
 type EventService struct {
@@ -32,9 +33,9 @@ func (s *EventService) AuthorizeUser(creatorID, userID uuid.UUID, isModerator bo
 }
 
 func (s *EventService) CreateEvent(ctx context.Context, event *models.Event) (*models.Event, error) {
-	//if event.StartDate == nil {
+	// if event.StartDate == nil {
 	//	return nil, errors.New("start date is required")
-	//}
+	// }
 
 	if event.EndDate != nil && event.EndDate.Before(event.StartDate) {
 		return nil, errors.New("end date must be after start date")
@@ -107,6 +108,7 @@ func (s *EventService) UpdateEvent(ctx context.Context, event *models.Event, use
 		return nil, err
 	}
 
+	event.Status = models.EVENT_STATUS_PENDING
 	err = s.repo.UpdateEvent(ctx, event)
 	if err != nil {
 		return nil, err
@@ -119,8 +121,8 @@ func (s *EventService) UpdateEvent(ctx context.Context, event *models.Event, use
 	return updatedEvent, nil
 }
 
-func (s *EventService) GetAllEvents(ctx context.Context, cursor *models.Cursor, pageSize int, isModerator bool) ([]models.Event, *models.Cursor, error) {
-	return s.repo.GetAllEvents(ctx, cursor, pageSize, isModerator)
+func (s *EventService) GetAllEvents(ctx context.Context, pg *specifications.Paging, isModerator bool) ([]models.Event, error) {
+	return s.repo.GetAllEvents(ctx, pg, isModerator)
 }
 
 func (s *EventService) AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error {
