@@ -12,7 +12,7 @@ CREATE TYPE user_role AS ENUM (
 );
 
 CREATE TABLE "users"(
-                        "id" UUID NOT NULL,
+                        "id" UUID DEFAULT public.uuid_generate_v4() NOT NULL,
                         "email" VARCHAR(255) NOT NULL,
                         "password" VARCHAR(255) NOT NULL,
                         "nickname" VARCHAR(255) NOT NULL,
@@ -28,7 +28,7 @@ CREATE INDEX "users_nickname_index" ON
 CREATE INDEX "users_phone_index" ON
     "users"("phone");
 CREATE TABLE "events"(
-                         "id" UUID NOT NULL,
+                         "id" UUID DEFAULT public.uuid_generate_v4() NOT NULL,
                          "title" VARCHAR(255) NOT NULL,
                          "description" TEXT NULL,
                          "start_date" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
@@ -54,13 +54,13 @@ CREATE INDEX "events_location_index" ON
 CREATE INDEX "events_category_id_index" ON
     "events"("category_id");
 CREATE TABLE "categories"(
-                             "id" UUID NOT NULL,
+                             "id" UUID DEFAULT public.uuid_generate_v4() NOT NULL,
                              "name" VARCHAR(255) NOT NULL
 );
 ALTER TABLE
     "categories" ADD PRIMARY KEY("id");
 CREATE TABLE "reviews"(
-                          "id" UUID NOT NULL,
+                          "id" UUID DEFAULT public.uuid_generate_v4() NOT NULL,
                           "user_id" UUID NOT NULL,
                           "event_id" UUID NOT NULL,
                           "description" VARCHAR(255) NOT NULL,
