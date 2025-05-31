@@ -67,11 +67,11 @@ func (r *CategoryPostgres) GetCategoryByID(ctx context.Context, categoryID uuid.
 }
 
 func (r *CategoryPostgres) CreateCategory(ctx context.Context, category *models.Category) (*models.Category, error) {
-	query := `INSERT INTO categories (id, name)
-			  VALUES ($1, $2)
+	query := `INSERT INTO categories (name)
+			  VALUES ($1)
 			  RETURNING id, name`
 
-	row := r.db.QueryRow(ctx, query, category.CategoryID, category.CategoryName)
+	row := r.db.QueryRow(ctx, query, category.CategoryName)
 
 	var created models.Category
 	if err := row.Scan(&created.CategoryID, &created.CategoryName); err != nil {
