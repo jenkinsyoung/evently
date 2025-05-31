@@ -21,7 +21,7 @@ func NewAuthService(repo repository.User, tokenManager *TokenManagerService) *Au
 
 func (s *AuthService) Register(ctx context.Context, user *models.User) (string, string, error) {
 	_, err := s.repo.GetUserByEmail(ctx, user.Email)
-	if err != nil {
+	if err == nil {
 		return "", "", errors.New("user already exists")
 	}
 

@@ -48,7 +48,7 @@ type Event interface {
 
 	UpdateEvent(ctx context.Context, event *models.Event, userID uuid.UUID, isModerator bool) (*models.Event, error)
 
-	GetAllEvents(ctx context.Context, page, pageSize int, isModerator bool) ([]models.Event, error)
+	GetAllEvents(ctx context.Context, cursor *models.Cursor, pageSize int, isModerator bool) ([]models.Event, *models.Cursor, error)
 
 	AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error
 	CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error

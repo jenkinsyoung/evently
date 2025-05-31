@@ -119,8 +119,8 @@ func (s *EventService) UpdateEvent(ctx context.Context, event *models.Event, use
 	return updatedEvent, nil
 }
 
-func (s *EventService) GetAllEvents(ctx context.Context, page, pageSize int, isModerator bool) ([]models.Event, error) {
-	return s.repo.GetAllEvents(ctx, page, pageSize, isModerator)
+func (s *EventService) GetAllEvents(ctx context.Context, cursor *models.Cursor, pageSize int, isModerator bool) ([]models.Event, *models.Cursor, error) {
+	return s.repo.GetAllEvents(ctx, cursor, pageSize, isModerator)
 }
 
 func (s *EventService) AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error {
@@ -128,5 +128,5 @@ func (s *EventService) AttendToEvent(ctx context.Context, eventID, userID uuid.U
 }
 
 func (s *EventService) CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error {
-	return s.repo.AttendToEvent(ctx, eventID, userID)
+	return s.repo.CancelAttendance(ctx, eventID, userID)
 }

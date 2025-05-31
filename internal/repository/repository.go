@@ -32,7 +32,7 @@ type Event interface {
 	DeleteEventByID(ctx context.Context, eventID uuid.UUID) error
 
 	UpdateEvent(ctx context.Context, event *models.Event) error
-	GetAllEvents(ctx context.Context, page, pageSize int, isModerator bool) ([]models.Event, error)
+	GetAllEvents(ctx context.Context, cursor *models.Cursor, pageSize int, isModerator bool) ([]models.Event, *models.Cursor, error)
 
 	AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error
 	CancelAttendance(ctx context.Context, eventID, userID uuid.UUID) error

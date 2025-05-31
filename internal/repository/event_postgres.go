@@ -202,30 +202,28 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 	return nil
 }
 
-func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int, isModerator bool) ([]models.Event, error) {
-	var events []models.Event
+func (r *EventPostgres) GetAllEvents(
+	ctx context.Context,
+	cursor *models.Cursor,
+	pageSize int,
+	isModerator bool) ([]models.Event, *models.Cursor, error) {
 
-	rows, err := r.db.Query(
-		ctx,
-		`
+	var (
+		events  []models.Event
+		lastCur models.Cursor
+	)
+
+	query := `
 			SELECT 
 				e.id, 
 				e.title, 
-				e.description, 
 				e.start_date, 	
 				e.end_date, 
 				e.creator_id, 
 				e.location, 
 				e.category_id, 
-				e.participant_count, 
-				e.image_urls, 
-				e.created_at,
-				e.status,
-				u.email, 
-				u.nickname, 
-				u.phone, 
-				u.profile_pic_url
-		
+				(e.image_urls->>0)     AS preview_image, 
+				e.status		
 			FROM events e
 			INNER JOIN users u ON u.id = e.creator_id
 		
@@ -237,40 +235,62 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, page, pageSize int, is
 				COALESCE(
 					e.end_date,
 					e.start_date + INTERVAL '23 hours 59 minutes 59 seconds'
-				) >= NOW()
-			ORDER BY 
-            	e.start_date ASC
-			LIMIT $2 OFFSET $3`,
-		isModerator,
-		pageSize,
-		(page-1)*pageSize,
-	)
+				) >= NOW()` //TODO: доделать пагинацию
+
+	args := []interface{}{isModerator}
+
+	if cursor != nil {
+		query += `
+          AND (
+            e.start_date > $2
+            OR (e.start_date = $2 AND e.id > $3)
+          )
+        `
+		args = append(args, cursor.LastStartDate, cursor.LastID)
+		// Нумерация параметров продолжится с $4
+		args = append(args, pageSize)
+		query += ` ORDER BY e.start_date, e.id LIMIT $4`
+	} else {
+		// Без курсора — просто первые pageSize
+		args = append(args, pageSize)
+		query += ` ORDER BY e.start_date, e.id LIMIT $2`
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var (
-			event models.Event
-		)
+		var ev models.Event
 
-		if err = rows.Scan(
-			&event.EventID, &event.EventTitle, &event.Description, &event.StartDate, &event.EndDate,
-			&event.Creator.UserID, &event.Location, &event.Category.CategoryID, &event.Participants, &event.ImageURLs,
-			&event.CreatedAt, &event.Status,
-			&event.Creator.Email, &event.Creator.Nickname, &event.Creator.Phone, &event.Creator.ProfilePicture,
+		if err := rows.Scan(
+			&ev.EventID,
+			&ev.EventTitle,
+			&ev.StartDate,
+			&ev.EndDate,
+			&ev.Creator.UserID,
+			&ev.Location,
+			&ev.Category.CategoryID,
+			&ev.ImageURLs,
+			&ev.Status,
 		); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		events = append(events, event)
+		events = append(events, ev)
+		lastCur = models.Cursor{LastStartDate: ev.StartDate, LastID: ev.EventID}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
+	// Если вернулось меньше, чем pageSize — данных больше нет
+	if len(events) < pageSize {
+		return events, nil, nil
 	}
-
-	return events, nil
+	// Иначе возвращаем курсор на последний элемент
+	return events, &lastCur, nil
 }
 
 func (r *EventPostgres) AttendToEvent(ctx context.Context, eventID, userID uuid.UUID) error {

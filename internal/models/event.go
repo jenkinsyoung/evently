@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type Cursor struct {
+	LastStartDate time.Time
+	LastID        uuid.UUID
+}
+
 type Event struct {
 	EventID      uuid.UUID  `json:"event_id" db:"id" binding:"uuid"`
 	EventTitle   string     `json:"event_title,omitempty" db:"title" binding:"max=255"`
