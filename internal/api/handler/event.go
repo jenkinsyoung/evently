@@ -123,16 +123,23 @@ func (h *Handler) UpdateEvent(c *gin.Context) {
 }
 
 func (h *Handler) GetAllEvents(c *gin.Context) {
-	page, err := strconv.ParseInt(c.Query("page"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
-		return
+	var page, pageSize int64
+	var err error
+
+	if c.Query("page") != "" {
+		page, err = strconv.ParseInt(c.Query("page"), 10, 64)
+		if err != nil || page < 1 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
+			return
+		}
 	}
 
-	pageSize, err := strconv.ParseInt(c.Query("pageSize"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pageSize parameter"})
-		return
+	if c.Query("pageSize") != "" {
+		pageSize, err = strconv.ParseInt(c.Query("pageSize"), 10, 64)
+		if err != nil || pageSize < 1 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pageSize parameter"})
+			return
+		}
 	}
 
 	role, exists := c.Get("userRole")

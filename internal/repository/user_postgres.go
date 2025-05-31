@@ -114,15 +114,24 @@ func (r *UserPostgres) GetUserByEmail(ctx context.Context, email string) (*model
 	return &user, nil
 }
 
-func (r *UserPostgres) CreateUser(ctx context.Context, user *models.User) error {
+func (r *UserPostgres) CreateUser(ctx context.Context, user *models.User) (uuid.UUID, error) {
+	var userID uuid.UUID
+
+	if user.Role != "ADMIN" {
+		user.Role = "USER"
+	}
+
 	query := `
-			INSERT INTO users (id, email, password, nickname, phone, profile_pic_url, role) 
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO users (email, password, nickname, phone, profile_pic_url, role) 
+			VALUES ($1, $2, $3, $4, $5, $6)
+			RETURNING id
 		`
 
-	_, err := r.db.Exec(ctx, query, user.UserID, user.Email, user.Password, user.Nickname, user.Phone, user.Role)
+	row := r.db.QueryRow(ctx, query, user.Email, user.Password, user.Nickname, user.Phone, user.ProfilePicture, user.Role)
 
-	return err
+	err := row.Scan(&userID)
+
+	return userID, err
 }
 
 func (r *UserPostgres) UpdateUser(ctx context.Context, user *models.User) error {

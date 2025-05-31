@@ -16,13 +16,12 @@ func NewReviewsService(repo repository.Reviews) *ReviewsService {
 }
 
 func (s *ReviewsService) CreateReviewForEvent(ctx context.Context, review *models.Review) (*models.ReviewResponse, error) {
-	review.ReviewID = uuid.New()
 
-	err := s.repo.CreateReviewForEvent(ctx, review)
+	reviewID, err := s.repo.CreateReviewForEvent(ctx, review)
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.GetReviewByID(ctx, review.ReviewID)
+	return s.repo.GetReviewByID(ctx, reviewID)
 }
 
 func (s *ReviewsService) GetReviewsForEvent(ctx context.Context, eventID uuid.UUID) ([]models.ReviewResponse, error) {

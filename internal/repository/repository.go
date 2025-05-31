@@ -16,7 +16,7 @@ type Repository struct {
 }
 
 type Reviews interface {
-	CreateReviewForEvent(ctx context.Context, review *models.Review) error
+	CreateReviewForEvent(ctx context.Context, review *models.Review) (uuid.UUID, error)
 
 	GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.ReviewResponse, error)
 
@@ -24,7 +24,7 @@ type Reviews interface {
 }
 
 type Event interface {
-	CreateEvent(ctx context.Context, event *models.Event) error
+	CreateEvent(ctx context.Context, event *models.Event) (uuid.UUID, error)
 
 	GetEventByID(ctx context.Context, eventID uuid.UUID) (*models.Event, error)
 	GetEventParticipants(ctx context.Context, eventID uuid.UUID) ([]models.User, error)
@@ -48,7 +48,7 @@ type User interface {
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 
-	CreateUser(ctx context.Context, user *models.User) error
+	CreateUser(ctx context.Context, user *models.User) (uuid.UUID, error)
 
 	UpdateUser(ctx context.Context, user *models.User) error
 

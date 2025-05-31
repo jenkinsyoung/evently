@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
 	"github.com/jenkinsyoung/evently/internal/models"
 	"github.com/jenkinsyoung/evently/internal/repository"
 	"github.com/jenkinsyoung/evently/internal/utils"
@@ -25,16 +24,15 @@ func (s *AuthService) Register(ctx context.Context, user *models.User) (string, 
 		return "", "", errors.New("user already exists")
 	}
 
-	user.UserID = uuid.New()
 	user.Password = utils.GeneratePasswordHash(user.Password)
 
-	err = s.repo.CreateUser(ctx, user)
+	userID, err := s.repo.CreateUser(ctx, user)
 	if err != nil {
 		return "", "", err
 	}
 
 	payload := Payload{
-		UserID: user.UserID,
+		UserID: userID,
 		Role:   user.Role,
 	}
 

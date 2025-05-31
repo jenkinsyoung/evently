@@ -29,15 +29,14 @@ func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model
 }
 
 func (s *UserService) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
-	user.UserID = uuid.New()
 	user.Password = utils.GeneratePasswordHash(user.Password)
 
-	err := s.repo.CreateUser(ctx, user)
+	userID, err := s.repo.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.repo.GetUserByID(ctx, user.UserID)
+	return s.repo.GetUserByID(ctx, userID)
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, user *models.User) (*models.User, error) {

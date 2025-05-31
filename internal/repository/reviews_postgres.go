@@ -15,22 +15,26 @@ func NewReviewsPostgres(db *pgxpool.Pool) *ReviewsPostgres {
 	return &ReviewsPostgres{db: db}
 }
 
-func (r *ReviewsPostgres) CreateReviewForEvent(ctx context.Context, review *models.Review) error {
+func (r *ReviewsPostgres) CreateReviewForEvent(ctx context.Context, review *models.Review) (uuid.UUID, error) {
+	var reviewID uuid.UUID
+
 	query := `
-			INSERT INTO reviews (id, user_id, event_id, description, score)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO reviews (user_id, event_id, description, score)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
 		`
-	_, err := r.db.Exec(
+	row := r.db.QueryRow(
 		ctx,
 		query,
-		review.ReviewID,
 		review.User.UserID,
 		review.Event.EventID,
 		review.Description,
 		review.Score,
 	)
 
-	return err
+	err := row.Scan(&reviewID)
+
+	return reviewID, err
 }
 
 func (r *ReviewsPostgres) GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.ReviewResponse, error) {

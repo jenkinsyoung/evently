@@ -57,14 +57,12 @@ func (s *EventService) CreateEvent(ctx context.Context, event *models.Event) (*m
 		return nil, errors.New("category does not exist")
 	}
 
-	event.EventID = uuid.New()
-
-	err = s.repo.CreateEvent(ctx, event)
+	eventID, err := s.repo.CreateEvent(ctx, event)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.repo.GetEventByID(ctx, event.EventID)
+	return s.repo.GetEventByID(ctx, eventID)
 }
 
 func (s *EventService) GetEventByID(ctx context.Context, eventID uuid.UUID) (*models.Event, error) {

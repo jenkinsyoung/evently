@@ -24,8 +24,6 @@ func (s *CategoryService) GetCategoryByID(ctx context.Context, categoryID uuid.U
 }
 
 func (s *CategoryService) CreateCategory(ctx context.Context, category *models.Category) (*models.Category, error) {
-	category.CategoryID = uuid.New()
-
 	return s.repo.CreateCategory(ctx, category)
 }
 

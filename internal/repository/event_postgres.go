@@ -18,21 +18,23 @@ func NewEventPostgres(db *pgxpool.Pool) *EventPostgres {
 	return &EventPostgres{db: db}
 }
 
-func (r *EventPostgres) CreateEvent(ctx context.Context, event *models.Event) error {
-	_, err := r.db.Exec(
+func (r *EventPostgres) CreateEvent(ctx context.Context, event *models.Event) (uuid.UUID, error) {
+	var eventID uuid.UUID
+
+	row := r.db.QueryRow(
 		ctx,
 		`INSERT INTO events (
-			id, title, description, start_date, end_date, 
+			title, description, start_date, end_date, 
 			creator_id, location, category_id, participant_count, image_urls, status
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		event.EventID, event.EventTitle, event.Description, event.StartDate, event.EndDate,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+		event.EventTitle, event.Description, event.StartDate, event.EndDate,
 		event.Creator.UserID, event.Location, event.Category.CategoryID, event.Participants,
 		event.ImageURLs, models.EVENT_STATUS_PENDING,
 	)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	err := row.Scan(&eventID)
+
+	return eventID, err
 }
 
 func (r *EventPostgres) GetEventByID(ctx context.Context, eventID uuid.UUID) (*models.Event, error) {
@@ -215,7 +217,7 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, paging *specifications
 				e.creator_id, 
 				e.location, 
 				e.category_id, 
-				(e.image_urls->>0)     AS preview_image, 
+				(e.image_urls[1]) AS image_urls, 
 				e.status		
 			FROM events e
 			INNER JOIN users u ON u.id = e.creator_id
