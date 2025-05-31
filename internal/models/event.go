@@ -20,6 +20,19 @@ type Event struct {
 	Status       string     `json:"event_status" db:"status"`
 }
 
+type EventListing struct {
+	EventID     uuid.UUID  `json:"event_id" db:"id" binding:"uuid"`
+	EventTitle  string     `json:"event_title,omitempty" db:"title" binding:"max=255"`
+	Description string     `json:"description,omitempty" db:"description" binding:""`
+	StartDate   time.Time  `json:"start_date" db:"start_date" binding:""`
+	EndDate     *time.Time `json:"end_date,omitempty" db:"end_date"`
+	Creator     User       `json:"creator,omitempty"`
+	Location    string     `json:"location,omitempty" db:"location"`
+	Category    Category   `json:"category,omitempty"`
+	CoverImage  string     `json:"cover_image" db:"cover_image"`
+	Status      string     `json:"event_status" db:"status"`
+}
+
 const (
 	EVENT_STATUS_APPROVED = "Одобрено"
 	EVENT_STATUS_PENDING  = "На модерации"

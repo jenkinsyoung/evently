@@ -119,7 +119,7 @@ func (s *EventService) UpdateEvent(ctx context.Context, event *models.Event, use
 	return updatedEvent, nil
 }
 
-func (s *EventService) GetAllEvents(ctx context.Context, pg *specifications.Paging, isModerator bool) ([]models.Event, error) {
+func (s *EventService) GetAllEvents(ctx context.Context, pg *specifications.Paging, isModerator bool) ([]models.EventListing, error) {
 	return s.repo.GetAllEvents(ctx, pg, isModerator)
 }
 

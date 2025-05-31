@@ -205,8 +205,8 @@ func (r *EventPostgres) UpdateEvent(ctx context.Context, event *models.Event) er
 	return nil
 }
 
-func (r *EventPostgres) GetAllEvents(ctx context.Context, paging *specifications.Paging, isModerator bool) ([]models.Event, error) {
-	var events []models.Event
+func (r *EventPostgres) GetAllEvents(ctx context.Context, paging *specifications.Paging, isModerator bool) ([]models.EventListing, error) {
+	var events []models.EventListing
 
 	query := `
 			SELECT 
@@ -217,11 +217,9 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, paging *specifications
 				e.creator_id, 
 				e.location, 
 				e.category_id, 
-				(e.image_urls[1]) AS image_urls, 
+				(e.image_urls[1]) AS cover_image, 
 				e.status		
 			FROM events e
-			INNER JOIN users u ON u.id = e.creator_id
-		
 			WHERE 
             -- модератор видит всё, обычный юзер только «Одобренные»
             ($1 = TRUE OR e.status = 'Одобрено')
@@ -239,7 +237,7 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, paging *specifications
 	defer rows.Close()
 
 	for rows.Next() {
-		var ev models.Event
+		var ev models.EventListing
 
 		if err = rows.Scan(
 			&ev.EventID,
@@ -249,7 +247,7 @@ func (r *EventPostgres) GetAllEvents(ctx context.Context, paging *specifications
 			&ev.Creator.UserID,
 			&ev.Location,
 			&ev.Category.CategoryID,
-			&ev.ImageURLs,
+			&ev.CoverImage,
 			&ev.Status,
 		); err != nil {
 			return nil, err
