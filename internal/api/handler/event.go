@@ -16,6 +16,14 @@ func (h *Handler) CreateEvent(c *gin.Context) {
 		return
 	}
 
+	userID, code, msg := GetUserIDFromContext(c)
+	if code != http.StatusOK {
+		c.JSON(code, gin.H{"error": msg})
+		return
+	}
+
+	event.Creator.UserID = userID
+
 	createdEvent, err := h.services.Event.CreateEvent(c, &event)
 
 	if err != nil {
